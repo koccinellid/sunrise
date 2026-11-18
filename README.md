@@ -64,7 +64,7 @@ Everything below is in the current release.
 
 ## Download
 
-Get **the Sunrise launcher** from [playsunrise.net/download](https://playsunrise.net/download), or from the newest `launcher@` release on [GitHub](https://github.com/sunrise-org/sunrise/releases?q=launcher&expanded=true):
+Get **the Sunrise launcher** from [playsunrise.net/download](https://playsunrise.net/download), or from GitHub: it has its own repository, [sunrise-org/sunrise-launcher](https://github.com/sunrise-org/sunrise-launcher), whose releases are also published here as `launcher@` releases ([1.0.0](https://github.com/sunrise-org/sunrise/releases?q=launcher&expanded=true) came from here):
 
 | Platform | File | Needs |
 | --- | --- | --- |

@@ -1,0 +1,2 @@
+# The public keys of sunrise-org/sunrise-launcher's releases (base64 Ed25519, one per line), which launcher-bridge.yml checks before it signs a launcher release here.
+# None yet: the launcher's key (LAUNCHER_SIGNING_KEY) is the core team's to create, and until it is listed here nothing is bridged.
