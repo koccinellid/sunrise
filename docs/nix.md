@@ -10,7 +10,6 @@ copy of Minecraft 26.3, as everywhere else ([hosting.md](hosting.md), step 2).
 | `sunrise-engine` | The server build of the game alone | Linux, macOS |
 | `sunrise-prepare` | `sunrise-prepare`, with a JDK 25 for the exporters it compiles | Linux, macOS |
 | `sunrise-client` | The game and `sunrise-ctl` | Linux, macOS |
-| `sunrise-launcher` | The launcher in an FHS environment (it builds native mods with Cargo) | Linux |
 
 ```sh
 nix run github:horizon-rust/horizon#sunrise-server -- --version
