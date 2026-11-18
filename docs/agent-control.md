@@ -470,8 +470,7 @@ of the frame ([#8750](https://github.com/horizon-rust/horizon/issues/8750)).
   - `setting`: Agent Control on opens the endpoint, the AI Agent page, Copy, and off closes it;
   - `repro`: origins in `state`/`input-log`, record-start/stop, the bundle's entries, and a
     replay ending near the recorded state.
-- **`tools/launcher_mcp_e2e.py`** drives `sunrise-launcher mcp`: the generated tools, `play` and
-  the `game_*` tools, `confirm`, `agent-config` and `--test`, and No AI.
+- The launcher's MCP server (`sunrise-launcher mcp`) is tested in [sunrise-launcher](https://github.com/sunrise-org/sunrise-launcher).
 
 ## Later
 

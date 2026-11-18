@@ -57,9 +57,9 @@ the website's `src/versions.js` (horizon-rust/horizon-site).
   version without its `v` in `SUNRISE_VERSION`, so `sunrise_core::release::VERSION` (and `--version`, the user
   agents and crash reports) say `0.2.3`. No version-bump commits: `Cargo.toml` versions are what builds
   from source say. The build checks that `sunrise-server --version` and `sunrise-prepare --version` say it.
-- **`launcher.yml`**: `decide --kind launcher` picks `launcher@0.2.N`; the build gets `SUNRISE_LAUNCHER_VERSION`
-  (`0.2.N`) and `SUNRISE_LAUNCHER_TAG` (`launcher@0.2.N`). The tag tells the launcher which line it is on: a release
-  built with only the version (every launcher before 0.2) is a `launcher-v` one.
+- **The launcher** is released from sunrise-org/sunrise-launcher; `launcher-bridge.yml` publishes each release here as
+  `launcher@X.Y.Z`. The tag tells the launcher which line it is on: a release built with only the version (every
+  launcher before 0.2) is a `launcher-v` one.
 - **Notes**: a line's first release (`X.Y.0`) opens with a paragraph saying so; `v0.2.0`'s and `launcher@0.2.0`'s say
   that releases are numbered from now on, and tell server owners to run `sunrise-server update` (or, if their server
   says it is up to date, `sunrise-server update --version v0.2.0`).

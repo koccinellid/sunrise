@@ -245,8 +245,8 @@ it. Mods loaded as WebAssembly run as separate modules, not linked into the exec
 
 | Path | Today |
 |---|---|
-| The launcher's release builds, every platform and format: Linux `.tar.gz` and AppImage, macOS `.zip` and signed `.dmg`, Windows `.zip` and `sunrise-launcher-setup*.exe` | `.github/workflows/launcher.yml` |
-| GitHub releases (`launcher@X.Y.Z`) | `launcher.yml`'s release job, `tools/release_train.py` |
+| The launcher's release builds, every platform and format: Linux `.tar.gz` and AppImage, macOS `.zip` and signed `.dmg`, Windows `.zip` and `sunrise-launcher-setup*.exe` | sunrise-org/sunrise-launcher's release workflow |
+| GitHub releases (`launcher@X.Y.Z`) | `.github/workflows/launcher-bridge.yml` (signed here, published there and here) |
 | playsunrise.net's download page | horizon-rust/horizon-site, reading `https://github.com/sunrise-org/sunrise-launcher/blob/main/links.json` and the releases |
 | The launcher's self-update | `https://github.com/sunrise-org/sunrise-launcher/blob/main/src/backend.rs` (`stage_update`), `https://github.com/sunrise-org/sunrise-launcher/blob/main/src/update_handoff.rs`, `https://github.com/sunrise-org/sunrise-launcher/blob/main/src/nightly.rs` |
 | The game builds the launcher installs, so the in-game part reaches every player | `.github/workflows/nightly-build.yml`, `release.yml`, `game-build.yml` |

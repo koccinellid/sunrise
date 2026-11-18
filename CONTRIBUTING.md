@@ -31,7 +31,7 @@ API follows its clean-break rules ([AGENTS.md](AGENTS.md#mod-api-on-this-fork-th
   cargo run --release -p sunrise-game
   ```
 
-- **Launcher:** its own Cargo workspace in `launcher/` (`cd launcher && cargo run`; on NixOS, `nix-shell` first).
+- **Launcher:** its own repository, [sunrise-org/sunrise-launcher](https://github.com/sunrise-org/sunrise-launcher) (`cargo run` there; on NixOS, `nix-shell` first).
 
 ## Vanilla first
 

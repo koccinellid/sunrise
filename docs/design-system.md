@@ -178,7 +178,7 @@ than Pixelify. Hover and focus are vanilla's white edge.
 - **Slots** hold pictures: a mod's or pack's own icon and gallery images from its source,
   downloaded when first shown and kept on disk (`https://github.com/sunrise-org/sunrise-launcher/blob/main/src/browser/images.rs`); the launcher
   ships no third-party pictures. Plain Minecraft shows Sunrise's own grass block
-  (`tools/launcher_grass_block.py`), Sunrise the brand icon (`docs/media/brand/icon.svg`). Sources are named in text ("from Modrinth"): Modrinth's logo is
+  (drawn by `tools/launcher_grass_block.py` in sunrise-launcher), Sunrise the brand icon (`docs/media/brand/icon.svg`). Sources are named in text ("from Modrinth"): Modrinth's logo is
   all rights reserved, so it is not shown.
 - **No ads.** The fork's launcher has no partner banners, sponsor links or upstream Discord links.
   This diverges from upstream.

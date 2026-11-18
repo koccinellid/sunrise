@@ -58,7 +58,7 @@ off.
 
 ### End-to-end check
 
-`tools/mod_browser_harness.py [--mod SLUG] [--query TEXT] [--keep]` runs the whole path a player takes, in a scratch
+`tools/mod_browser_harness.py [--mod SLUG] [--query TEXT] [--keep]` (in sunrise-launcher) runs the whole path a player takes, in a scratch
 game folder: the launcher's `mods search --kind mod`, `mods check` and `mods install` (Modrinth), then the game
 opens a survival world with the mod offscreen (sunrise-ctl), places one of its blocks, and crafts one of its recipes
 from vanilla ingredients on a crafting table and takes the result. It times the world's load with and without the
@@ -141,7 +141,7 @@ browser installed from it, the URLs asked for in one request (`GET /projects?ids
 the row; else a generic glyph. The tab builds only the rows near the view, so a pack of hundreds costs what a few do.
 
 **Vanilla Minecraft** is marked with Sunrise's own grass block (`https://github.com/sunrise-org/sunrise-launcher/blob/main/assets/logos/grass-block.png`, drawn by
-`tools/launcher_grass_block.py` from our palette, not from Mojang's textures): the game-version filter, the Java Edition
+`tools/launcher_grass_block.py` (in sunrise-launcher) from our palette, not from Mojang's textures): the game-version filter, the Java Edition
 tab and plain Minecraft instances show it. No Mojang file or logo is in the launcher or the repository.
 
 **Source logos.** Modrinth's logo is not shown: Modrinth's own repository says its branding is all rights reserved and

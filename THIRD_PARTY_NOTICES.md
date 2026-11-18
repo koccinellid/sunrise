@@ -186,7 +186,7 @@ trademarks; Sunrise is not affiliated with AMD.
 The launcher shows the logo of the mod loader an instance plays with, and offers the logos as
 instance icons.
 
-- `launcher/assets/logos/{fabric,quilt,neoforge,forge}.png` are the loaders' logos as the launcher
+- `assets/logos/{fabric,quilt,neoforge,forge}.png` in [sunrise-launcher](https://github.com/sunrise-org/sunrise-launcher) are the loaders' logos as the launcher
   mockup on [playsunrise.net/launcher](https://playsunrise.net/launcher) shows them (sunrise-site
   `public/media/launcher/*.webp`, converted to PNG), each its project's own mark:
   [Fabric](https://fabricmc.net/), [Quilt](https://quiltmc.org/) (its art is

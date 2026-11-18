@@ -762,7 +762,7 @@ Install Sunrise on NixOS through a Nix flake.
 
 <details><summary>Technical</summary>
 
-A player's idea (#sunrise-ideas). The launcher's AppImage ships with each launcher release ([packaging/linux/appimage.sh](packaging/linux/appimage.sh)): one file with the libraries GPUI needs, which replaces itself when it updates. A flake.nix packaging the release binaries with their runtime libraries (Vulkan loader, X11/Wayland, ALSA) is still missing, the way sunrise-parity's NixOS setup runs them today.
+A player's idea (#sunrise-ideas). The launcher's AppImage ships with each launcher release (packaging/linux/appimage.sh in sunrise-launcher): one file with the libraries GPUI needs, which replaces itself when it updates. A flake.nix packaging the release binaries with their runtime libraries (Vulkan loader, X11/Wayland, ALSA) is still missing, the way sunrise-parity's NixOS setup runs them today.
 
 </details>
 

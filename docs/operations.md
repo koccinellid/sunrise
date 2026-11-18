@@ -55,7 +55,7 @@ Everything below runs by itself on GitHub; you only step in when something is wr
 - **Rolling back:** revert the pull request and merge the revert. Players can pick an earlier build on the
   launcher's Versions page meanwhile.
 - **The reviewers' picks:** `/nightly status` shows the set, `/nightly clear` builds main alone.
-- **Launcher releases** follow the same train (`launcher.yml`).
+- **Launcher releases** are made in sunrise-org/sunrise-launcher and signed here by `launcher-bridge.yml`.
 
 Daily vanilla parity uses Dyna's runners, separate from the Mac builds and smoke tests. A red or incomplete
 required parity run holds the automatic Nightly; see [Parity on main](release-flow.md#parity-on-main).

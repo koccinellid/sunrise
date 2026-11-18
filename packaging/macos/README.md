@@ -1,4 +1,6 @@
-# The macOS launcher: Sunrise.app in a .dmg
+# macOS packaging
+
+The launcher's own packaging (`package.sh`, `Info.plist`, the .dmg background) moved with the launcher to [sunrise-org/sunrise-launcher](https://github.com/sunrise-org/sunrise-launcher); the sections below describe it and the signing and notarization this folder's `keychain.sh` and `notarize.sh` still do for the game's macOS builds.
 
 `package.sh BINARY VERSION OUTDIR` (run by `.github/workflows/launcher.yml` on macOS) makes:
 

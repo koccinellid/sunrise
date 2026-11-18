@@ -1,10 +1,5 @@
 # Upstream integration checks
 
-`audit_launcher_restoration.py --upstream <sha> --upstream-base <sha>` inventories
-changed launcher files and fork commits. It marks whole upstream takes without
-judging whether a fork hunk is a permitted Sunrise-layer restoration or mod work
-that must remain. Reviewers check the inventory and the resulting corrections.
-
 ## Upstream changes the merge dropped
 
 A conflict resolved to the fork's side drops upstream's change silently: the sync builds, and the fork later looks

@@ -41,7 +41,7 @@ A reference page is written by code from the source it describes, and a test fai
 | --- | --- | --- |
 | [server-reference.md](server-reference.md) | `sunrise-server`'s help, `config::TEMPLATE`, `api::ROUTES` | `SUNRISE_WRITE_DOCS=1 cargo test -p sunrise-server reference` |
 | [sunrise-ctl-commands.md](../sunrise-ctl-commands.md) | the command table in `crates/sunrise-client/src/bin/sunrise-ctl/commands.rs` | `sunrise-ctl help --markdown > docs/sunrise-ctl-commands.md` |
-| [launcher-commands.md](https://github.com/sunrise-org/sunrise-launcher/blob/main/docs/launcher-commands.md) | `https://github.com/sunrise-org/sunrise-launcher/blob/main/src/cli.rs` | `SUNRISE_WRITE_DOCS=1 cargo test --manifest-path https://github.com/sunrise-org/sunrise-launcher/blob/main/Cargo.toml the_launcher_reference` |
+| [launcher-commands.md](https://github.com/sunrise-org/sunrise-launcher/blob/main/docs/launcher-commands.md) | `src/cli.rs` in [sunrise-launcher](https://github.com/sunrise-org/sunrise-launcher) | `SUNRISE_WRITE_DOCS=1 cargo test the_launcher_reference` there |
 | [launch-reference.md](launch-reference.md) | `crates/sunrise-client/src/game/runtime/launch_api.rs` | `SUNRISE_WRITE_DOCS=1 cargo test -p sunrise-client --lib launch_api` |
 
 So a pull request that changes an API also changes its reference, and the reviewer sees the API's diff in the

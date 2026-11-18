@@ -38,10 +38,7 @@ it: the daily's `windows-runtime-leases.yml` job runs it by exact name (`ignored
 fails if it does not run, and reports its result to the daily summary. verify-static fails a row no leg runs. `python3 tools/ci/move_to_daily.py apply LIST` writes the
 attribute and the row (its docstring has the list format). The attribute is the source's mark and the row is the
 daily run's list of what must run: an attribute without a row in a package no shard covers would run nowhere.
-A launcher test is moved the same way (a new `daily-sunrise-launcher-TOPIC.txt`): its own leg, `daily-rows-launcher`, runs it
-from `https://github.com/sunrise-org/sunrise-launcher`, its own workspace, against its own lockfile. A launcher test that starts the launcher binary also belongs to
-the Windows release job `launcher-processes` (`windows-runtime-leases.yml`), which runs those `tests/` targets by
-`--test` name: add its target there too.
+The launcher's tests are daily tests of its own repository (sunrise-org/sunrise-launcher), not rows here.
 verify-static also checks both directions statically: a `#[ignore = "daily"]` function with no row, or a row with no
 such function, fails (`check_ignored_test_rows.py`). Daily selection matches the package, Cargo target and complete
 logical libtest path, including inline modules. Game area folders do not add path segments: the source-only

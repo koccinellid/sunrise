@@ -41,7 +41,7 @@ Feature → files → harness for the most-changed areas: [docs/architecture.md]
   becomes an issue listing the suspect PRs, fixed by an ordinary PR. Existing tests still in `verify` that need
   resources, a child process or the network are being moved by the next change of #4022. Builds: snapshot (a commit of main, gate green; published as
   `snapshot-<date>-<short>`, which no launcher offers), nightly (published by a fully green daily run), release (cut from a nightly).
-- **No hardcoded user-facing strings.** Keep UI translation-ready from the start. In the launcher (`launcher/`), wrap visible text with `tr("...")` or `trf("... {arg} ...", &[("arg", &val)])` from `crate::i18n` instead of raw string literals or `format!`. In the game, use translation keys (`Text::tr`, `lang::get`), never hardcoded English strings.
+- **No hardcoded user-facing strings.** Keep UI translation-ready from the start. In the launcher ([sunrise-org/sunrise-launcher](https://github.com/sunrise-org/sunrise-launcher)), wrap visible text with `tr("...")` or `trf("... {arg} ...", &[("arg", &val)])` from `crate::i18n` instead of raw string literals or `format!`. In the game, use translation keys (`Text::tr`, `lang::get`), never hardcoded English strings.
 - **Claim before you start**: comment `/claim` on the issue (no issue yet: open one, then claim it). An assigned
   issue is taken, and so is one labelled `in progress` (claimed on Discord): pick another. `/unclaim` when you stop;
   a claim with no open PR linking it is released after 5 days. The issues free to claim, without reading threads:
@@ -125,7 +125,7 @@ waiting in loops, and work someone else had already done. Tests were a small par
 
 ## Crates
 
-Game workspace (root `Cargo.toml`); `launcher/` and `crates/sunrise-telemetry-server` are separate workspaces.
+Game workspace (root `Cargo.toml`); `crates/sunrise-telemetry-server` is a separate workspace, and the launcher is its own repository, [sunrise-org/sunrise-launcher](https://github.com/sunrise-org/sunrise-launcher).
 
 | Crate | Owns |
 |---|---|
@@ -164,12 +164,12 @@ Game workspace (root `Cargo.toml`); `launcher/` and `crates/sunrise-telemetry-se
 | `sunrise-platform` | The platform's public API: what the Sunrise layer may use of the engine ([docs/layers.md](docs/layers.md)); re-exports `sunrise-system` today |
 | `sunrise-hooks`, `sunrise-game`, `sunrise-official`, `sunrise-heartbeat` | The layer seam: the engine's hooks for crates above it, the game an executable starts, the official executable (shipped as `sunrise-client`) that registers Sunrise's in-game parts, the first of them ([docs/layers.md](docs/layers.md#how-a-sunrise-crate-plugs-in)) |
 | `sunrise-dualsense`, `sunrise-threads`, `sunrise-release-sign`, `sunrise-bots`, `xtask` | DualSense output, thread priorities, signed release checksums, load-test bots, repo tasks |
-| `launcher/` | GPUI launcher, **moved to [sunrise-org/sunrise-launcher](https://github.com/sunrise-org/sunrise-launcher) with its history (2026-11-18)**: make launcher changes there. This copy is frozen until it is removed (launcher split D1); `launcher-bridge.yml` signs that repository's releases with this repository's release key and publishes them there and here as `launcher@X.Y.Z`, for launchers installed from here |
+| [sunrise-org/sunrise-launcher](https://github.com/sunrise-org/sunrise-launcher) | GPUI launcher, in its own repository (moved there with its history, 2026-11-18): make launcher changes there. `launcher-bridge.yml` signs that repository's releases with this repository's release key and publishes them there and here as `launcher@X.Y.Z`, for launchers installed from here |
 
 Other top-level folders: `tools/` (harnesses and dev scripts), `tests/` (Python unit tests: `python3 -m
 unittest discover -s tests`), `mods/sunrise/src/test/java/dev/sunriselab/parity/` (Java oracles),
 `docs/`, `.github/workflows/`. The website (playsunrise.net) is `frontend/site` in the private sunrise-org/sunny: its build
-reads `README.md`, `launcher/links.json`, `docs/api/`, `roadmap/roadmap.json` and `crates/sunrise-theme/tokens.css` from main.
+reads `README.md`, `docs/api/`, `roadmap/roadmap.json` and `crates/sunrise-theme/tokens.css` from main.
 
 ## Write tests with signal
 
