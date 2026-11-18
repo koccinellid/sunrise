@@ -1,0 +1,121 @@
+name: launcher-bridge
+# Publishes a sunrise-org/sunrise-launcher release here as launcher@X.Y.Z, so launchers installed from this repository (launcher@1.0.0) update to it.
+# By hand from main, a dry run by default: gh workflow run launcher-bridge --ref main -f version=1.1.0 [-f dry_run=false]
+# The files are checked against the launcher's key (tools/ci/launcher-release-keys.txt, empty until the core team creates it), then signed here with this repository's key: no key leaves its repository.
+# Launcher releases wait for a Nightly with `sunrise-prepare needs` and an SDK with the `tool` asset; this bridges only what the launcher repository released.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The launcher release to bridge (X.Y.Z, released as vX.Y.Z in sunrise-org/sunrise-launcher)
+        type: string
+        required: true
+      dry_run:
+        description: Check and sign with a throwaway key, but publish nothing
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: launcher-bridge
+  cancel-in-progress: false
+
+env:
+  LAUNCHER_REPOSITORY: sunrise-org/sunrise-launcher
+  VERSION: ${{ inputs.version }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      dry_run: ${{ steps.mode.outputs.dry_run }}
+    steps:
+      - id: mode
+        # Off main every run is a dry run.
+        run: echo "dry_run=${{ github.ref != 'refs/heads/main' || inputs.dry_run }}" >> "$GITHUB_OUTPUT"
+      - name: The version is X.Y.Z, and not here yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::version must be X.Y.Z, not $VERSION"; exit 1; }
+          if gh release view "launcher@$VERSION" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::error::launcher@$VERSION is already published here"; exit 1
+          fi
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            tools/ci/verify_launcher_release.sh
+            tools/ci/launcher-release-keys.txt
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: The launcher repository's release v${{ inputs.version }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "v$VERSION" -R "$LAUNCHER_REPOSITORY" -D dist --pattern 'sunrise-launcher-*' --pattern 'SHA256SUMS' --pattern 'SHA256SUMS.sig'
+      - name: Signed by the launcher's key, every file as signed
+        run: bash tools/ci/verify_launcher_release.sh "v$VERSION" dist tools/ci/launcher-release-keys.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: launcher-files
+          path: dist/sunrise-launcher-*
+          if-no-files-found: error
+          retention-days: 3
+
+  sign:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The only job that holds this repository's release key; it runs nothing from the repository but sign_release.sh.
+    environment: ${{ needs.check.outputs.dry_run != 'true' && 'release' || '' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: tools/ci/sign_release.sh
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: launcher-files
+          path: dist
+      - name: Sign the same files for launcher@${{ inputs.version }} (SHA256SUMS, SHA256SUMS.sig)
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+          RELEASE_SIGNING_KEY_NEXT: ${{ secrets.RELEASE_SIGNING_KEY_NEXT }}
+          EPHEMERAL: ${{ needs.check.outputs.dry_run == 'true' && 'yes' || '' }}
+        run: bash tools/ci/sign_release.sh "launcher@$VERSION" dist/sunrise-launcher-*
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bridged
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 3
+
+  publish:
+    needs: [check, sign]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: bridged
+          path: dist
+      - name: Publish launcher@${{ inputs.version }}
+        if: needs.check.outputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A pre-release, never marked latest: the game's releases stay this repository's latest.
+          gh release create "launcher@$VERSION" -R "$GITHUB_REPOSITORY" --target main --prerelease --latest=false \
+            --title "Sunrise Launcher $VERSION" \
+            --notes "The launcher's own release [v$VERSION](https://github.com/$LAUNCHER_REPOSITORY/releases/tag/v$VERSION), the same files signed here so launchers installed from this repository update to it. From then on they update from $LAUNCHER_REPOSITORY." \
+            dist/sunrise-launcher-* dist/SHA256SUMS dist/SHA256SUMS.sig
+      - name: Dry run, the release that would be published
+        if: needs.check.outputs.dry_run == 'true'
+        run: |
+          echo "Would publish launcher@$VERSION here, signed for launcher@$VERSION:"
+          ls -l dist
