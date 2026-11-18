@@ -3,7 +3,7 @@ run-name: daily ${{ inputs.commit || github.sha }}${{ github.event_name == 'work
 # The daily tier (CI tiers, owner 2026-11-13; docs/release-flow.md "Daily run"): every in-game test, once a day on
 # main's head and by root's dispatch. Its legs are the workflows that used to run on main pushes, called unchanged:
 # the ignored-tests data shards, the wasm fixture and guest stacks, fn-replace-check and the native linkage probe,
-# plus the launcher's Windows runtime-lease tests (launcher-windows-check.yml), the machine sample built against this
+# plus the Windows runtime-lease tests (windows-runtime-leases.yml), the machine sample built against this
 # API (machine-sample.yml) and the prebuilt SDK of the commit (prebuilt-game-build.yml), which the nightly needs.
 # The summary then moves the tag `daily-green` to the commit when every leg passed, or files one issue per failing
 # test (tools/ci/daily_summary.py), and on all green the nightly is published from that commit (release.yml).
@@ -156,12 +156,11 @@ jobs:
     uses: ./.github/workflows/native-dylib-probe.yml
     with:
       commit: ${{ needs.resolve.outputs.commit }}
-  # The launcher's Windows tests that start child processes: the runtime leases and the debug
-  # launcher binary's subprocess tests (launcher-windows-check.yml launcher-processes).
+  # The game's Windows tests that start child processes: the runtime leases and the `windows` daily rows.
   windows-runtime-leases:
     needs: resolve
     if: needs.resolve.outputs.skip == 'false'
-    uses: ./.github/workflows/launcher-windows-check.yml
+    uses: ./.github/workflows/windows-runtime-leases.yml
     with:
       commit: ${{ needs.resolve.outputs.commit }}
   # sunrise-org/sunrise-machine-sample at its pin, compiled against this commit's mod API: a red means the sample must

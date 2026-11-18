@@ -93,7 +93,6 @@ jobs:
       # Whether this run's code may use our own runners: never a fork's pull request, dispatched or not.
       trusted: ${{ steps.gate.outputs.trusted || ((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'true' || 'false') }}
       rust_required: ${{ steps.selection.outputs.rust_required || 'true' }}
-      launcher_required: ${{ steps.selection.outputs.launcher_required || 'true' }}
       tooling_required: ${{ steps.selection.outputs.tooling_required || 'true' }}
       # Only a gate (heavy) uses Dyna's runners; a pull request outside it runs where a pool-down run would.
       self_hosted: ${{ steps.gate.outputs.heavy == 'true' && !inputs.github-fallback && steps.hosted.outputs.forced_github != 'true' && steps.runner.outputs.self_hosted || 'false' }}
@@ -697,7 +696,6 @@ jobs:
       - name: Check formatting
         run: |
           python3 tools/ci/format_scan.py
-          (cd launcher && cargo fmt --check)
 
   verify-static:
     needs: changes
@@ -816,11 +814,6 @@ jobs:
         id: ignored_test_policy_files_read_cleanly
         if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: python3 tools/ci/check_ignored_test_rows.py
-      # The launcher split's gate (drafts plan B7): no manifest path, include or #[path] module leaves launcher/.
-      - name: The launcher builds from its own files
-        id: the_launcher_builds_from_its_own_files
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        run: python3 tools/ci/check_launcher_standalone.py
       - name: The vanilla build reuses the default build's dependencies
         id: extras_features
         if: ${{ !cancelled() && steps.setup.outcome == 'success' && runner.os == 'Linux' && needs.changes.outputs.rust_required != 'false' }}
@@ -903,107 +896,10 @@ jobs:
           GATE_STEPS: ${{ toJSON(steps) }}
         run: python3 tools/ci/gate_summary.py
 
-  # The launcher is its own workspace (launcher/Cargo.toml), so verify's cargo runs never build it. A pull request that
-  # changes it or a crate it builds is checked here, and so is every push to main: two pull requests can each pass
-  # alone and break it together (#2059 and the registry ratings did, 2026-10-26).
-  launcher:
-    needs: changes
-    if: needs.changes.outputs.launcher_required != 'false' && needs.changes.outputs.heavy == 'true'
-    runs-on: ${{ needs.changes.outputs.self_hosted == 'true' && 'dyna-medium' || !inputs.github-fallback && needs.changes.outputs.forced_github != 'true' && vars.SELF_HOSTED_CI == 'all' && needs.changes.outputs.trusted == 'true' && fromJSON('["self-hosted", "linux", "playsunrise-ci"]') || 'ubuntu-latest' }}
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          # A dispatch with `pr`: that pull request's head; otherwise this event's commit.
-          ref: ${{ needs.changes.outputs.pr_sha }}
-      - name: Check Dyna dependencies (install fallback without root)
-        if: needs.changes.outputs.launcher_required != 'false' && needs.changes.outputs.self_hosted == 'true'
-        run: bash tools/ci/dyna_ci_deps.sh
-      - name: Install Rust and the headers GPUI links against
-        if: needs.changes.outputs.launcher_required != 'false'
-        env:
-          HOSTED: ${{ runner.environment == 'github-hosted' }}
-          DYNA: ${{ needs.changes.outputs.self_hosted }}
-        run: |
-          if [ "$HOSTED" = true ]; then
-            bash tools/ci/install_launcher_deps.sh libxkbcommon-x11-dev libwayland-dev \
-              libx11-xcb-dev libfontconfig-dev libvulkan-dev libasound2-dev libudev-dev
-          elif [ "$DYNA" = true ]; then
-            if [ ! -x "$CARGO_HOME/bin/rustup" ]; then
-              curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal
-            fi
-            export PATH="$CARGO_HOME/bin:$PATH"
-          fi
-          bash tools/ci/rustup_install.sh --profile minimal --component rustfmt --component clippy
-      - uses: Swatinem/rust-cache@v2
-        if: needs.changes.outputs.launcher_required != 'false' && runner.environment == 'github-hosted'
-        with:
-          workspaces: launcher
-          shared-key: launcher
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-      # Every job that builds in this runner's persistent target keeps its source snapshot true: a
-      # build of another tree without it left artifacts that a later job judged fresh (stale generated
-      # sources, 2026-11-13). Only byte-identical Git objects regain their previous timestamps.
-      - name: Restore unchanged source timestamps
-        run: python3 tools/ci/source_mtimes.py "${CARGO_TARGET_DIR:-target}/ci-source-mtimes-v2.json"
-      # Every build and test in this job runs at the runner's size, not the host's (tools/ci/cargo_jobs.py).
-      - name: Cap build parallelism to the runner
-        run: python3 tools/ci/cargo_jobs.py --job-mib 3072 --cap
-      - name: Setup done
-        id: setup
-        run: 'true'
-      - name: Check launcher formatting
-        id: check_launcher_formatting
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        working-directory: launcher
-        env:
-          JOBS: ${{ needs.changes.outputs.self_hosted == 'true' && '-j2' || '' }}
-        run: cargo fmt --check
-      - name: Lint launcher
-        id: lint_launcher
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        working-directory: launcher
-        env:
-          JOBS: ${{ needs.changes.outputs.self_hosted == 'true' && '-j2' || '' }}
-        run: python3 ../tools/ci/check_warnings.py cargo clippy $JOBS --keep-going --all-targets --locked
-      - name: Test launcher library and binaries
-        id: test_launcher_library_and_binaries
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        working-directory: launcher
-        env:
-          JOBS: ${{ needs.changes.outputs.self_hosted == 'true' && '-j2' || '' }}
-        run: cargo test $JOBS --no-fail-fast --locked --lib --bins
-      - name: Test launcher storage
-        id: test_launcher_storage
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        working-directory: launcher
-        env:
-          JOBS: ${{ needs.changes.outputs.self_hosted == 'true' && '-j2' || '' }}
-        run: cargo test $JOBS --no-fail-fast --locked --test storage
-      - name: Build launcher runtime holder test actor
-        id: build_launcher_runtime_holder_test_actor
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        working-directory: launcher
-        env:
-          JOBS: ${{ needs.changes.outputs.self_hosted == 'true' && '-j2' || '' }}
-        run: python3 ../tools/ci/ignored_shards.py --prepare sunrise-mod-package $JOBS
-      - name: Test launcher runtime package
-        id: test_launcher_runtime_package
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' && steps.build_launcher_runtime_holder_test_actor.outcome == 'success' }}
-        working-directory: launcher
-        env:
-          JOBS: ${{ needs.changes.outputs.self_hosted == 'true' && '-j2' || '' }}
-        run: cargo test $JOBS --no-fail-fast --manifest-path ../Cargo.toml --locked -p sunrise-mod-package --features runtime-process --lib
-      - name: Summarize failed gate steps
-        if: ${{ failure() && !cancelled() && steps.setup.outcome == 'success' }}
-        env:
-          GATE_STEPS: ${{ toJSON(steps) }}
-        run: python3 tools/ci/gate_summary.py
-
   # A dispatch with `pr`: posts the heavy jobs' results on that pull request's head. It runs none of its code, so it
   # alone holds the write permission, and only for commit statuses.
   pr-status:
-    needs: [changes, lint, verify, verify-static, launcher]
+    needs: [changes, lint, verify, verify-static]
     if: always() && github.event_name == 'workflow_dispatch' && inputs.pr != '' && needs.changes.outputs.pr_sha != ''
     # Five seconds of status posts after the gate: nothing waits on it, so it takes none of Dyna's counted runners.
     runs-on: ubuntu-latest
@@ -1021,7 +917,7 @@ jobs:
           python3 - <<'PY'
           import json, os, urllib.request
           states = {"success": "success", "skipped": "success", "failure": "failure", "cancelled": "error"}
-          for job in ("lint", "verify", "verify-static", "launcher"):
+          for job in ("lint", "verify", "verify-static"):
               result = json.loads(os.environ["RESULTS"])[job]["result"]
               body = {"state": states.get(result, "error"), "context": f"dispatched/{job}",
                       "description": f"dyna-checks dispatched on this head: {result}", "target_url": os.environ["RUN"]}

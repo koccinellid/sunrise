@@ -34,13 +34,13 @@ those there, each alone in its own process with the `needs SUNRISE_WASM_FIXTURE`
 A `windows` row must name an integration test (`test:NAME`) in the game workspace. The Cargo target root
 must be the package's `tests/NAME.rs` and begin with `#![cfg(windows)]` after any comments. Library,
 binary and launcher-workspace targets cannot use this reason. No Linux shard or `daily-rows` leg runs or expects
-it: the daily's `launcher-windows-check.yml` job runs it by exact name (`ignored_tests.py --windows-rows --run`),
+it: the daily's `windows-runtime-leases.yml` job runs it by exact name (`ignored_tests.py --windows-rows --run`),
 fails if it does not run, and reports its result to the daily summary. verify-static fails a row no leg runs. `python3 tools/ci/move_to_daily.py apply LIST` writes the
 attribute and the row (its docstring has the list format). The attribute is the source's mark and the row is the
 daily run's list of what must run: an attribute without a row in a package no shard covers would run nowhere.
 A launcher test is moved the same way (a new `daily-sunrise-launcher-TOPIC.txt`): its own leg, `daily-rows-launcher`, runs it
 from `https://github.com/sunrise-org/sunrise-launcher`, its own workspace, against its own lockfile. A launcher test that starts the launcher binary also belongs to
-the Windows release job `launcher-processes` (`launcher-windows-check.yml`), which runs those `tests/` targets by
+the Windows release job `launcher-processes` (`windows-runtime-leases.yml`), which runs those `tests/` targets by
 `--test` name: add its target there too.
 verify-static also checks both directions statically: a `#[ignore = "daily"]` function with no row, or a row with no
 such function, fails (`check_ignored_test_rows.py`). Daily selection matches the package, Cargo target and complete

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Select CI checks from one fail-closed Git diff.
 
-The default answers Rust selection; --launcher uses the launcher's dependency paths.
---all emits the shared Rust, launcher and tooling decisions for dyna-checks (the machine sample is a daily leg,
+The default answers Rust selection.
+--all emits the shared Rust and tooling decisions for dyna-checks (the machine sample is a daily leg,
 machine-sample.yml, so dyna-checks selects nothing for it).
 server_build: whether verify's clippy of the server build has anything new to check (needs_server_build).
 """
@@ -14,14 +14,9 @@ from pathlib import Path
 
 # The repository root, appended so a script run finds `tools` without shadowing anything already importable.
 sys.path.append(str(Path(__file__).resolve().parents[2]))
-from tools import release_train  # noqa: E402
 
-# The root workspace's manifest and toolchain files: the launcher's path crates inherit from them.
+# The root workspace's manifest and toolchain files.
 ROOT_RUST = {"Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "rustfmt.toml", "clippy.toml"}
-# The check itself: a change to it runs it.
-LAUNCHER_CHECK = {".github/workflows/ci.yml", ".github/workflows/dyna-ci.yml",
-                  "tools/ci/rust_changes.py", "tools/release_train.py"}
-
 
 # The Python under tools/ and tests/: verify's Python steps and the parity jobs run it, and no Rust build or test reads
 # it (Rust does read tools/native-hook-fragments/*.json and tools/ci/*.sh, so those still count). This script and the
@@ -45,14 +40,6 @@ SERVER_BUILD_CHECK = {".github/workflows/ci.yml", "tools/ci/rust_changes.py"}
 def needs_server_build(paths):
     return any(path.startswith("crates/sunrise-client") or path.endswith("Cargo.toml") or path in ROOT_RUST
                or path.startswith(".cargo/") or path in SERVER_BUILD_CHECK for path in paths)
-
-
-def needs_launcher(paths):
-    return any(path in ROOT_RUST or path in LAUNCHER_CHECK or (
-        path.startswith(tuple(release_train.LAUNCHER_PATHS))
-        and not path.startswith(tuple(release_train.LAUNCHER_IGNORED))
-        and not path.endswith(".md")
-    ) for path in paths)
 
 
 # Stands for "everything changed" when no diff can be computed: a root manifest every check and shard selector
@@ -80,7 +67,6 @@ def needs_tooling(changes):
 def selections(changes):
     paths = [path for _, path in changes]
     return {"rust_required": needs_rust(paths),
-            "launcher_required": needs_launcher(paths),
             "tooling_required": needs_tooling(changes)}
 
 
@@ -109,9 +95,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("base")
     parser.add_argument("head")
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--launcher", action="store_true", help="answer for the launcher instead")
-    mode.add_argument("--all", action="store_true", help="emit centralized dyna-checks selections")
+    parser.add_argument("--all", action="store_true", help="emit centralized dyna-checks selections")
     args = parser.parse_args()
     changes = changed_entries(args.base, args.head)
     paths = [path for _, path in changes]
@@ -119,7 +103,6 @@ if __name__ == "__main__":
         for name, required in selections(changes).items():
             print(f"{name}={str(required).lower()}")
     else:
-        needs = needs_launcher if args.launcher else needs_rust
-        print(f"required={str(needs(paths)).lower()}")
+        print(f"required={str(needs_rust(paths)).lower()}")
         print(f"sample={str(needs_sample(paths)).lower()}")
         print(f"server_build={str(needs_server_build(paths)).lower()}")

@@ -672,46 +672,6 @@
     "rationale": "Opt-in measurement, not an ordinary daily correctness check: microbenchmark; run with --ignored --nocapture. Run by hand on an idle machine with the optimized profile and its explicitly requested inputs; all assertions remain in the test."
   },
   {
-    "package": "sunrise-launcher",
-    "target": "bin:sunrise-launcher",
-    "test": "cull::desktop_tests::desktop_list_renders_the_viewport_after_scrollbar_jumps",
-    "path": "launcher/src/cull.rs",
-    "reason": "requires an interactive desktop and graphics adapter",
-    "rationale": "Compiled only on Windows (cfg(all(test, target_os = \"windows\"))) and opens a real window; explicit manual runner by-hand in tools/ci/ignored-tests/manual-sunrise-launcher.txt. Not selected by daily shards."
-  },
-  {
-    "package": "sunrise-launcher",
-    "target": "lib",
-    "test": "account::tests::secrets_file_writer",
-    "path": "launcher/src/account/tests.rs",
-    "reason": "a child process of processes_sharing_the_secrets_file_lose_nothing",
-    "rationale": "Existing explicit manual runner subprocess in tools/ci/ignored-tests/manual-sunrise-launcher.txt: a child process of processes_sharing_the_secrets_file_lose_nothing. Not selected by daily shards."
-  },
-  {
-    "package": "sunrise-launcher",
-    "target": "lib",
-    "test": "account::tests::system_keychain_keeps_long_secrets",
-    "path": "launcher/src/account/tests.rs",
-    "reason": "writes to the OS keychain",
-    "rationale": "Existing explicit manual runner by-hand in tools/ci/ignored-tests/manual-sunrise-launcher.txt: writes to the OS keychain. Not selected by daily shards."
-  },
-  {
-    "package": "sunrise-launcher",
-    "target": "lib",
-    "test": "backend::release_loading_tests::benchmark_shared_startup_response",
-    "path": "launcher/src/backend/release_loading_tests.rs",
-    "reason": "local release-loading benchmark; run explicitly with --ignored --nocapture",
-    "rationale": "Existing explicit manual runner by-hand in tools/ci/ignored-tests/manual-sunrise-launcher.txt: local release-loading benchmark; run explicitly with --ignored --nocapture. Not selected by daily shards."
-  },
-  {
-    "package": "sunrise-launcher",
-    "target": "lib",
-    "test": "browser::tests::live_modrinth_search_pick_and_download",
-    "path": "launcher/src/browser/tests.rs",
-    "reason": "needs the network",
-    "rationale": "Existing explicit manual runner by-hand in tools/ci/ignored-tests/manual-sunrise-launcher.txt: needs the network. Not selected by daily shards."
-  },
-  {
     "package": "sunrise-native-build",
     "target": "lib",
     "test": "api::tests::wrapper_owns_holder_marker",
@@ -726,54 +686,6 @@
     "path": "crates/sunrise-native-build/src/registry_compile.rs",
     "reason": "requires an explicitly prepared private SDK, mod and launcher executable",
     "rationale": "Existing explicit manual runner by-hand in tools/ci/ignored-tests/manual-sunrise-native-build.txt: requires an explicitly prepared private SDK, mod and launcher executable. Not selected by daily shards."
-  },
-  {
-    "package": "sunrise-launcher",
-    "target": "lib",
-    "test": "pictures::tests::a_32k_screenshot_is_read_in_little_memory",
-    "path": "launcher/src/pictures.rs",
-    "reason": "slow soak: 2 GiB of pixels; run with --ignored --nocapture",
-    "rationale": "Existing explicit manual runner by-hand in tools/ci/ignored-tests/manual-sunrise-launcher.txt: slow soak: 2 GiB of pixels; run with --ignored --nocapture. Not selected by daily shards."
-  },
-  {
-    "package": "sunrise-launcher",
-    "target": "lib",
-    "test": "rust_toolchain::tests::managed_arm64_toolchain_builds_the_game",
-    "path": "launcher/src/rust_toolchain.rs",
-    "reason": "downloads the managed Windows ARM64 toolchain and builds Sunrise",
-    "rationale": "Existing explicit manual runner ci.yml in tools/ci/ignored-tests/manual-sunrise-launcher.txt: downloads the managed Windows ARM64 toolchain and builds Sunrise. Not selected by daily shards."
-  },
-  {
-    "package": "sunrise-launcher",
-    "target": "lib",
-    "test": "storage::inventory::eviction_tests::allocated_forty_gib_cleanup_proof",
-    "path": "launcher/src/storage/inventory.rs",
-    "reason": "manual allocated 40 GiB proof; requires SUNRISE_EVICTION_PROOF_ROOT in checkout scratch",
-    "rationale": "Existing explicit manual runner by-hand in tools/ci/ignored-tests/manual-sunrise-launcher.txt: manual allocated 40 GiB proof; requires SUNRISE_EVICTION_PROOF_ROOT in checkout scratch. Not selected by daily shards."
-  },
-  {
-    "package": "sunrise-launcher",
-    "target": "lib",
-    "test": "telemetry::tests::official_count_follows_the_srv_record",
-    "path": "launcher/src/telemetry.rs",
-    "reason": "asks the live official server",
-    "rationale": "Existing explicit manual runner by-hand in tools/ci/ignored-tests/manual-sunrise-launcher.txt: asks the live official server. Not selected by daily shards."
-  },
-  {
-    "package": "sunrise-launcher",
-    "target": "test:startup",
-    "test": "cli_settings_work_with_one_mib_process_stack",
-    "path": "launcher/tests/startup.rs",
-    "reason": "the Windows launcher-processes job runs it by name",
-    "rationale": "Existing explicit Windows runner launcher-processes in launcher-windows-check.yml selects this test by name; its manual row in tools/ci/ignored-tests/manual-sunrise-launcher.txt preserves that routing. Not selected by daily shards."
-  },
-  {
-    "package": "sunrise-launcher",
-    "target": "test:startup",
-    "test": "hardware_probes_run_hidden_after_the_first_frame",
-    "path": "launcher/tests/startup.rs",
-    "reason": "requires an interactive Windows desktop and graphics adapter",
-    "rationale": "Existing explicit manual runner by-hand in tools/ci/ignored-tests/manual-sunrise-launcher.txt: requires an interactive Windows desktop and graphics adapter. Not selected by daily shards."
   },
   {
     "package": "sunrise-mod-api",
@@ -814,14 +726,6 @@
     "path": "crates/sunrise-mod-package/src/holder/game_entry.rs",
     "reason": "fixture writer subprocess only",
     "rationale": "Existing explicit manual runner subprocess in tools/ci/ignored-tests/manual-sunrise-mod-package.txt: fixture writer subprocess only. Not selected by daily shards."
-  },
-  {
-    "package": "sunrise-launcher-smod",
-    "target": "lib",
-    "test": "holder::game_entry::tests::write_missing_registration_actor",
-    "path": "launcher/crates/smod/src/holder/game_entry.rs",
-    "reason": "fixture writer subprocess only",
-    "rationale": "Existing explicit manual runner subprocess in tools/ci/ignored-tests/manual-sunrise-launcher-smod.txt: fixture writer subprocess only. Not selected by daily shards."
   },
   {
     "package": "sunrise-mod-vocab",

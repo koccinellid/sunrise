@@ -64,7 +64,7 @@ class Test(NamedTuple):
 
 
 def target_roots(root=ROOT):
-    """Cargo target roots, including explicit paths and the launcher's separate workspace."""
+    """Cargo target roots, including explicit paths."""
     roots = set()
     for workspace in ignored_shards.WORKSPACES:
         table = tomllib.loads((root / workspace / "Cargo.toml").read_text())

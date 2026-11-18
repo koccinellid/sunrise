@@ -12,7 +12,7 @@ The game ships only the Nightly since 2026-10-28 (Ludovic): when `decide --kind 
 On the fork (CI tiers, owner 2026-11-13) `--channel` names the kind of build: `nightly` takes `daily-green` and
 refuses any other --head (an older commit had no daily run of its own, and no SDK) unless --exception names the
 owner's one-time grant for it (owner, 2026-11-17: an exception never changes the rule); `snapshot` takes main's head (or
-a --head on main) and refuses a commit whose gate jobs (dyna-checks' main-push lint, verify, verify-static, launcher)
+a --head on main) and refuses a commit whose gate jobs (dyna-checks' main-push lint, verify, verify-static)
 did not all pass (pending is not passed). The next push cancels a main push run (dyna-ci.yml), so a publishing run
 (GATE_RERUN=1: release.yml's decide and nightly-build.yml's pick, real runs) waits for the commit's run and starts it again once when it was cancelled, in a
 group no push cancels (gate_again); otherwise it always builds, as snapshot-<date>-<short> (no batch rules,
@@ -617,7 +617,7 @@ def gate_jobs_passed(run_id, required):
 
 
 DAILY_GREEN = "daily-green"
-GATE = {"lint", "verify", "verify-static", "launcher"}
+GATE = {"lint", "verify", "verify-static"}
 
 
 def daily_green_commit():

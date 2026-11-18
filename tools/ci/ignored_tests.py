@@ -30,10 +30,9 @@ A row marked `daily` (`PACKAGE TEST TARGET daily REASON`, in `daily-<package>.tx
 `verify` into the daily run with `#[ignore = "daily"]` (tools/ci/move_to_daily.py): not a known failure, it must
 pass, and its row must name a test that still runs. A package's shard runs the daily rows of the targets it
 already runs (its library; every target for the packages in INTEGRATION_TESTS); the shard `daily-rows`
-(tools/ci/ignored_shards.py; `daily-rows-launcher` for the launcher's) runs every other daily row: the root workspace's tests are built once with verify's command
+(tools/ci/ignored_shards.py) runs every other daily row: the root workspace's tests are built once with verify's command
 (WORKSPACE_TEST_BUILD) and each package's test executables then run with `--ignored --exact TEST...`; a package that
-build didn't make, or one in OWN_BUILD, runs `cargo test -p PACKAGE TARGET... -- --ignored --exact TEST...`, from the package's own workspace: a launcher row runs from launcher/ against its
-own lockfile (`--locked`). A daily row whose reason names an input only one job builds (DAILY_INPUTS: `wasm-fixture`)
+build didn't make, or one in OWN_BUILD, runs `cargo test -p PACKAGE TARGET... -- --ignored --exact TEST...`, from the package's own workspace (`--locked`). A daily row whose reason names an input only one job builds (DAILY_INPUTS: `wasm-fixture`)
 runs in that job with the `needs` rows of that variable (`--needs SUNRISE_WASM_FIXTURE --one-process-each`), never in a
 shard.
 
@@ -47,7 +46,7 @@ for a job's other tests (the wasm fixture job: one build with one feature resolu
 `--daily-tests PACKAGE TARGET` prints the tests one target's daily rows list, one per line (the Windows daily job
 runs sunrise-mod-package's with `-- --ignored --exact`).
 `--windows-rows` prints every `windows` daily row as `PACKAGE TARGET TEST`, one per line. With `--run`, it runs
-those rows by exact name, one Cargo process per row (launcher-windows-check.yml). No Linux leg runs or expects them.
+those rows by exact name, one Cargo process per row (windows-runtime-leases.yml). No Linux leg runs or expects them.
 `--report FILE` also writes the run's verdict as JSON for the daily run's summary (tools/ci/daily_summary.py): each
 problem's package, test identity, kind, panic location and policy file, the tests that passed, and the runs that
 did not complete with why (stopped()). It is written before each run too, naming that run as in progress, so a job
@@ -117,7 +116,7 @@ DAILY_TARGET = re.compile(r"^(?:lib|(?:bin|test):[\w-]+)$")
 # Why a test is a daily test (CONTRIBUTING.md "CI tiers"): slower than 2 s, or what it needs.
 DAILY_REASONS = ("slow", "game-boot", "resources", "child-process", "network", "wasm-fixture", "windows")
 # A daily reason for a test whose target compiles only on Windows (`#![cfg(windows)]`): no Linux shard or `daily-rows`
-# leg selects or expects it, and the Windows job of launcher-windows-check.yml runs it (--windows-rows).
+# leg selects or expects it, and the Windows job of windows-runtime-leases.yml runs it (--windows-rows).
 WINDOWS_REASON = "windows"
 # A daily reason that names an input only one job builds: its rows run there, each alone in its own process with the
 # `needs VARIABLE` rows (--needs VARIABLE --one-process-each), never in the shards, which do not have it.
@@ -167,7 +166,7 @@ def compile_diagnostics(output):
 @lru_cache(maxsize=32)
 def source_lines(path):
     """Only immutable tracked Rust blobs, never a working-tree or resource file."""
-    if not re.fullmatch(r"(?:crates|launcher)/[A-Za-z0-9_./-]+\.rs", path):
+    if not re.fullmatch(r"crates/[A-Za-z0-9_./-]+\.rs", path):
         return None
     if any(part in ("", ".", "..", "target", ".local") for part in path.split("/")):
         return None
@@ -533,7 +532,7 @@ def safe_identity(name):
 
 @lru_cache(maxsize=1)
 def tracked_rust_paths():
-    listing = subprocess.run(["git", "ls-tree", "-rl", "HEAD", "--", "crates", "launcher"],
+    listing = subprocess.run(["git", "ls-tree", "-rl", "HEAD", "--", "crates"],
                              capture_output=True, text=True, errors="replace")
     paths = set()
     if listing.returncode == 0:
@@ -541,7 +540,7 @@ def tracked_rust_paths():
             fields = line.split()
             if (len(fields) == 5 and fields[0] in ("100644", "100755") and
                     fields[1] == "blob" and fields[3].isdigit() and int(fields[3]) <= SOURCE_BYTES and
-                    re.fullmatch(r"(?:crates|launcher)/[A-Za-z0-9_./-]+\.rs", fields[4]) and
+                    re.fullmatch(r"crates/[A-Za-z0-9_./-]+\.rs", fields[4]) and
                     not any(part in ("", ".", "..", "target", ".local") for part in fields[4].split("/"))):
                 paths.add(fields[4])
     return paths
@@ -1013,7 +1012,7 @@ def run(package, skip, number=None, count=None, only=None, binaries=None):
         workspace = "."
         if only:
             targets = only[0]
-            # A package of another workspace (the launcher's) runs from that workspace, against its own lockfile.
+            # A package runs from its own workspace, against its own lockfile.
             workspace = ignored_shards.workspace_members()[package][1]
             features = workspace_features(workspace).get(package, [])
             # --no-fail-fast: the package's targets share one cargo run, and a failing one must not stop the targets

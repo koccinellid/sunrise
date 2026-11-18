@@ -3,7 +3,7 @@
 
 Fails on a malformed row, a test listed in two files, a folder with no rows or with a file other than `*.txt`
 and README.md, and a file at the retired single-list path. The shared reader validates both `needs`
-and `needs-plain` fixture rows; neither is a known failure. Every `daily` row must name a package of a workspace (the game's or the launcher's) and
+and `needs-plain` fixture rows; neither is a known failure. Every `daily` row must name a package of a workspace (the game's) and
 one of its test targets, and some leg of the daily run's matrix must run it: its package's shard, or the `daily-rows`
 leg (tools/ci/ignored_shards.py), so no moved test runs nowhere. A row whose reason names an input only one job
 builds (ignored_tests.DAILY_INPUTS: `wasm-fixture`) runs in that job instead, which a workflow must call with
@@ -39,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).with_name("vendor") / "pyyaml-6.0.3.zip"))
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-WINDOWS_WORKFLOW = ".github/workflows/launcher-windows-check.yml"
+WINDOWS_WORKFLOW = ".github/workflows/windows-runtime-leases.yml"
 ADD_ROW = ("add its row: `python3 tools/ci/move_to_daily.py apply LIST` (its docstring has the list format), or write "
            "`PACKAGE TEST TARGET daily REASON` into tools/ci/ignored-tests/daily-PACKAGE-TOPIC.txt")
 
@@ -136,7 +136,7 @@ def windows_target_problems(rows, root=ROOT):
 
 
 def source_packages():
-    """Each member's source folder, in every workspace (the launcher's too) -> the packages whose sources it holds
+    """Each member's source folder, in every workspace -> the packages whose sources it holds
     (the deepest folder wins, and crates/sunrise-client also builds sunrise-client-lib:
     tools/ci/ignored_shards.py SHARED_SOURCES)."""
     return {member: set(ignored_shards.SHARED_SOURCES.get(Path(member).name, (name,))) | {name}

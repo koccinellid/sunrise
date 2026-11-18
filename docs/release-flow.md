@@ -124,7 +124,7 @@ dispatch replaces an older waiting one. The schedule stops when main's head alre
 a hand dispatch never does, so it retries a run whose tag move, issues or nightly failed. Its legs are the workflows that left main pushes:
 the ignored-tests data shards (`ignored-tests.yml`), the wasm fixture and guest stacks (`wasm-mods.yml`),
 `fn-replace-check.yml`, the native linkage probe (`native-dylib-probe.yml`), the launcher's Windows runtime-lease
-tests (`launcher-windows-check.yml`), the machine sample built against the commit's mod API (`machine-sample.yml`)
+tests (`windows-runtime-leases.yml`), the machine sample built against the commit's mod API (`machine-sample.yml`)
 and the prebuilt SDK of the commit
 (`prebuilt-game-build.yml`; each leg packs its slices, and `sdk-publish` signs and publishes them as the mod SDK's
 release `sdk-<sha>` (`sdk-publish.yml`) only when its own legs are green on a real run on main, before the Nightly that
