@@ -211,11 +211,11 @@ jobs:
         env:
           CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS: true
         run: |
-          launcher_src="${RUNNER_TEMP:-/tmp}/sunrise-launcher"
+          launcher_src="$FNR_SCRATCH/sunrise-launcher"
           rm -rf "$launcher_src"
           git clone --quiet https://github.com/sunrise-org/sunrise-launcher "$launcher_src"
           git -C "$launcher_src" checkout --quiet "$(cat tools/ci/launcher-pin)"
-          target="${CARGO_TARGET_DIR:-$launcher_src/target}/launcher-debug-assertions"
+          target="$launcher_src/target"
           cargo build --release --locked --manifest-path "$launcher_src/Cargo.toml" --target-dir "$target"
           echo "LAUNCHER=$(realpath "$target/release/sunrise-launcher")" >> "$GITHUB_ENV"
       - name: Function replacement check (build and link)
