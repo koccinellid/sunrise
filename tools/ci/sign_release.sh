@@ -33,12 +33,20 @@ also=${ALSO_FOR:-}
 if [[ -n "$also" && ! ( "$tag" =~ ^(nightly|snapshot)$ && "$also" =~ ^$tag-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{7,40}$ ) ]]; then
   echo "ALSO_FOR=$also: not a $tag-<date>-<commit> build of the nightly or snapshot channel" >&2; exit 1
 fi
+# LAUNCHER_FOR=vX.Y.Z (launcher-bridge.yml, tag launcher@X.Y.Z) also signs SHA256SUMS for "sunrise-launcher release vX.Y.Z\n" into SHA256SUMS.launcher.sig.
+launcher_for=${LAUNCHER_FOR:-}
+if [[ -n "$launcher_for" && ( -n "$also" || ! "$launcher_for" =~ ^v(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})$ || "$tag" != "launcher@${launcher_for#v}" ) ]]; then
+  echo "LAUNCHER_FOR=$launcher_for: not the vX.Y.Z of a launcher@X.Y.Z tag ($tag), or set with ALSO_FOR" >&2; exit 1
+fi
 (cd "$dir" && "${sha[@]}" -- "${names[@]}") > "$dir/SHA256SUMS"
 { printf 'horizon release %s\n' "$tag"; cat "$dir/SHA256SUMS"; } > "$work/message"
 if [[ -n "$also" ]]; then
   { printf 'horizon release %s\n' "$also"; cat "$dir/SHA256SUMS"; } > "$work/message.v2"
 fi
-rm -f "$dir/SHA256SUMS.sig" "$dir/SHA256SUMS.v2.sig" "$dir/ephemeral.pub"
+if [[ -n "$launcher_for" ]]; then
+  { printf 'sunrise-launcher release %s\n' "$launcher_for"; cat "$dir/SHA256SUMS"; } > "$work/message.launcher"
+fi
+rm -f "$dir/SHA256SUMS.sig" "$dir/SHA256SUMS.v2.sig" "$dir/SHA256SUMS.launcher.sig" "$dir/ephemeral.pub"
 
 sign_one() {  # key file, message file, signature file to append to
   "$openssl" pkeyutl -sign -rawin -inkey "$1" -keyform DER -in "$2" -out "$work/signature"
@@ -52,6 +60,9 @@ sign_with() {  # the key file in $1: both messages, then the key goes
   sign_one "$1" "$work/message" "$dir/SHA256SUMS.sig"
   if [[ -n "$also" ]]; then
     sign_one "$1" "$work/message.v2" "$dir/SHA256SUMS.v2.sig"
+  fi
+  if [[ -n "$launcher_for" ]]; then
+    sign_one "$1" "$work/message.launcher" "$dir/SHA256SUMS.launcher.sig"
   fi
   rm -f "$1"
 }
@@ -69,4 +80,4 @@ else
     fi
   done
 fi
-echo "$tag: SHA256SUMS lists ${#names[@]} files; $( [[ -f "$dir/SHA256SUMS.sig" ]] && echo "signed with $(wc -l < "$dir/SHA256SUMS.sig" | tr -d ' ') key(s)" || echo "no signing key, so unsigned")$( [[ -f "$dir/SHA256SUMS.v2.sig" ]] && echo ", and for $also in SHA256SUMS.v2.sig")"
+echo "$tag: SHA256SUMS lists ${#names[@]} files; $( [[ -f "$dir/SHA256SUMS.sig" ]] && echo "signed with $(wc -l < "$dir/SHA256SUMS.sig" | tr -d ' ') key(s)" || echo "no signing key, so unsigned")$( [[ -f "$dir/SHA256SUMS.v2.sig" ]] && echo ", and for $also in SHA256SUMS.v2.sig")$( [[ -f "$dir/SHA256SUMS.launcher.sig" ]] && echo ", and for the launcher's $launcher_for in SHA256SUMS.launcher.sig")"
