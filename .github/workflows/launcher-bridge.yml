@@ -59,7 +59,8 @@ jobs:
           private-key: ${{ secrets.SUNNY_APP_PRIVATE_KEY }}
           owner: sunrise-org
           repositories: sunrise-launcher
-          permission-contents: read
+          # GitHub shows draft releases and their files only to a token with push access; this one only reads.
+          permission-contents: write
       - name: The draft v${{ inputs.version }} and its files
         id: draft
         env:
