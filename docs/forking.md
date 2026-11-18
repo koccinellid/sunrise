@@ -11,7 +11,7 @@ ads. No Cargo feature restores them. CI's public-tree check
 (`tools/check_public_tree.py`, run by `verify-static`) fails a branch that
 brings back `crates/sunrise-cosmetics`, `crates/sunrise-official-servers`, the
 launcher's `partner`, `shop`, `wardrobe` and `wardrobe_page` sources, or
-`launcher/assets/sculk-*`. It looks at the current tree, not at history, so the
+`https://github.com/sunrise-org/sunrise-launcher/tree/main/assets/sculk-*`. It looks at the current tree, not at history, so the
 commits from before the removal stay allowed. The Mods and
 Sunrise Settings pages remain available independently of the client's default
 features; disabling audio or controllers does not hide mod management.
@@ -48,7 +48,7 @@ gate guards.
 
 ## Not behind the feature
 
-- The launcher (`launcher/`) holds its themes, the telemetry consent and updates. A build of the game alone has none of them; without the
+- The launcher (`https://github.com/sunrise-org/sunrise-launcher`) holds its themes, the telemetry consent and updates. A build of the game alone has none of them; without the
   launcher's consent the game keeps no crash or performance report (docs/telemetry.md).
 - The graphics screen's fullbright, dynamic lights and hiding block-break particles: renderer
   options, off by default (docs/extras.md). A `sunrise-extras.txt` left by an official install is

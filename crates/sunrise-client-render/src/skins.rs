@@ -741,7 +741,7 @@ pub fn process_cape(width: u32, height: u32, rgba: &[u8]) -> Option<Vec<u8>> {
 }
 
 /// The cape the launcher gives an offline name (`SUNRISE_OFFLINE_CAPE`, a
-/// PNG's path; launcher/src/skins.rs), read once as `process_cape` lays it out.
+/// PNG's path; https://github.com/sunrise-org/sunrise-launcher/blob/main/src/skins.rs), read once as `process_cape` lays it out.
 pub fn offline_cape() -> Option<&'static [u8]> {
     static CAPE: std::sync::OnceLock<Option<Vec<u8>>> = std::sync::OnceLock::new();
     CAPE.get_or_init(|| {
@@ -759,7 +759,7 @@ pub fn offline_cape() -> Option<&'static [u8]> {
 
 /// The skin the launcher gives an offline name (`SUNRISE_OFFLINE_SKIN`, a
 /// PNG's path, and `SUNRISE_OFFLINE_SKIN_MODEL`, `classic` or `slim`;
-/// launcher/src/skins.rs): its 64x64 RGBA as `process_legacy_skin` lays it
+/// https://github.com/sunrise-org/sunrise-launcher/blob/main/src/skins.rs): its 64x64 RGBA as `process_legacy_skin` lays it
 /// out, and whether it is slim. Read once.
 pub fn offline_skin() -> Option<&'static (Vec<u8>, bool)> {
     static SKIN: std::sync::OnceLock<Option<(Vec<u8>, bool)>> = std::sync::OnceLock::new();

@@ -47,7 +47,7 @@ Every 0.2 tag is newer than every tag from before 0.2. Within each:
 
 A tag is a 0.2 tag when it is `v` or `launcher@` followed by exactly three numbers (and an optional `-PRE`) with a
 major below 1000; a date's first number is a year, so `v2026.10.21` never is. The rule is written once per
-language, with the same tests: `crates/sunrise-server/src/update.rs` (`newer`), `launcher/src/backend.rs`
+language, with the same tests: `crates/sunrise-server/src/update.rs` (`newer`), `https://github.com/sunrise-org/sunrise-launcher/blob/main/src/backend.rs`
 (`release_order`), `tools/release_train.py` (`tag_key`) and
 the website's `src/versions.js` (horizon-rust/horizon-site).
 

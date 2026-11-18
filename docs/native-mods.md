@@ -110,7 +110,7 @@ python3 tools/native_dylib_probe.py --sdk prebuilt --output target/native-dylib-
 
 For a server archive, add `--server` to the build command. Use a fresh
 `CARGO_TARGET_DIR` when collecting a clean-build proof; all commands must use the
-same compiler as `launcher/src/rust_toolchain.rs`.
+same compiler as `https://github.com/sunrise-org/sunrise-launcher/blob/main/src/rust_toolchain.rs`.
 
 ## Upstream service contracts carried by this sync
 

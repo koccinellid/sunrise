@@ -90,7 +90,7 @@ fn shared_dir_of(
 }
 
 /// Where the launcher runs the game and keeps its saves: `--home`, else `SUNRISE_HOME`, else
-/// `sunrise` in the platform data folder (launcher/src/backend.rs `game_home`).
+/// `sunrise` in the platform data folder (https://github.com/sunrise-org/sunrise-launcher/blob/main/src/backend.rs `game_home`).
 pub fn game_home() -> PathBuf {
     if let Some(home) = HOME.get() {
         return home.clone();

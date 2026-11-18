@@ -39,7 +39,7 @@ fails if it does not run, and reports its result to the daily summary. verify-st
 attribute and the row (its docstring has the list format). The attribute is the source's mark and the row is the
 daily run's list of what must run: an attribute without a row in a package no shard covers would run nowhere.
 A launcher test is moved the same way (a new `daily-sunrise-launcher-TOPIC.txt`): its own leg, `daily-rows-launcher`, runs it
-from `launcher/`, its own workspace, against its own lockfile. A launcher test that starts the launcher binary also belongs to
+from `https://github.com/sunrise-org/sunrise-launcher`, its own workspace, against its own lockfile. A launcher test that starts the launcher binary also belongs to
 the Windows release job `launcher-processes` (`launcher-windows-check.yml`), which runs those `tests/` targets by
 `--test` name: add its target there too.
 verify-static also checks both directions statically: a `#[ignore = "daily"]` function with no row, or a row with no

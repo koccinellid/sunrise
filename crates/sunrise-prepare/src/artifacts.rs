@@ -244,7 +244,7 @@ fn layouts(folder: &Path, version: &str) -> [GameFiles; 2] {
 /// packages and Flatpak start it in.
 fn launcher_folders() -> Vec<(&'static str, PathBuf)> {
     let mut folders = vec![("the official launcher", minecraft_dir(None))];
-    // The same folders as the Sunrise launcher's (launcher/src/sources.rs `known_folders`).
+    // The same folders as the Sunrise launcher's (https://github.com/sunrise-org/sunrise-launcher/blob/main/src/sources.rs `known_folders`).
     let atlauncher: Vec<PathBuf> = if cfg!(target_os = "macos") {
         let app = Path::new("Applications/ATLauncher.app/Contents/Java");
         vec![

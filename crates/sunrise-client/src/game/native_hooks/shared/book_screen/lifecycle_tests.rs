@@ -136,7 +136,7 @@ fn authoritative_custom_book_rebuilds_cached_geometry_without_observe_screen() {
     mod_platform::testing::with_mods(mods, || {
         crate::game::native_entity_refs::tests::with_client_game(|game| {
             let key = KEY.get().unwrap().clone();
-            // The lightweight Game fixture does not run the launcher/content
+            // The lightweight Game fixture does not run the https://github.com/sunrise-org/sunrise-launcher/tree/main/content
             // bootstrap that publishes the negotiated menu registry.
             mod_api::__private::resolve_menus(["geometry:menu"]).unwrap();
             let (pipe, _server) = sunrise_protocol::connection::Pipe::pair();

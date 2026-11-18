@@ -496,18 +496,18 @@ No SDK compilation is needed to evaluate this design.
 ## Launcher releases
 
 `.github/workflows/launcher.yml` releases the launcher the same way. It starts on a push to main that changes
-`launcher/`, `crates/sunrise-prepare/` or `crates/sunrise-theme/` (what the launcher builds in), every hour at :47,
+`https://github.com/sunrise-org/sunrise-launcher`, `crates/sunrise-prepare/` or `crates/sunrise-theme/` (what the launcher builds in), every hour at :47,
 and by hand; pushes to `launcher` and `launcher-*` branches only build.
 
 - `tools/release_train.py decide --kind launcher` counts the pull requests merged since the last published
-  launcher release that changed those paths (not `launcher/links.json`, which the launcher reads from main, nor
+  launcher release that changed those paths (not `https://github.com/sunrise-org/sunrise-launcher/blob/main/links.json`, which the launcher reads from main, nor
   tests or Markdown), with the same batching rule (5 pull requests settled 5 minutes, or the oldest 6 hours), `release-now`, `skip-release` and `RELEASES_PAUSED`.
 - The tag is `launcher@X.Y.Z` on the release line (`launcher@0.2.0` first; the game and the launcher count their
   patches separately). Without `.github/release-line.txt`, `launcher-vX.Y.Z`: the patch after the last launcher tag,
   or the next minor (`X.Y+1.0`) when one of those pull requests is labelled `feature`. `launcher-v0.2.0` was taken
   long before 0.2, hence the new prefix.
 - No version-bump commits: the build gets the version in `SUNRISE_LAUNCHER_VERSION` and the tag in
-  `SUNRISE_LAUNCHER_TAG`, which `launcher/src/backend.rs` reads with `option_env!` (falling back to `Cargo.toml`'s),
+  `SUNRISE_LAUNCHER_TAG`, which `https://github.com/sunrise-org/sunrise-launcher/blob/main/src/backend.rs` reads with `option_env!` (falling back to `Cargo.toml`'s),
   so `--version`, the window, the User-Agent and the self-update comparison all use them. Each build checks
   `--version` says it.
 - Linux on GitHub `ubuntu-22.04`, Windows x64 on `windows-latest`, Windows ARM64 on `windows-11-vs2026-arm`, and
@@ -518,7 +518,7 @@ and by hand; pushes to `launcher` and `launcher-*` branches only build.
   requests under New and Fixed; Kira posts launcher releases without pinging.
 - Windows also publishes `sunrise-launcher-setup.exe` (x64) and `sunrise-launcher-setup-arm64.exe`, the launcher's
   binary under another name: with no
-  arguments it opens the per-user setup (`launcher/src/installer.rs`) instead of Home, and
+  arguments it opens the per-user setup (`https://github.com/sunrise-org/sunrise-launcher/blob/main/src/installer.rs`) instead of Home, and
   `sunrise-launcher.exe uninstall` removes it again. Both files are in the release's signed `SHA256SUMS`.
 
 Making a launcher release GitHub's latest instead would break servers: every `sunrise-server` already installed,
@@ -636,7 +636,7 @@ comment on any issue or pull request (`.github/workflows/nightly-command.yml`, `
   2026-10-27), and lists each in its summary. It never deletes the newest build, a build a published `nightly` or
   `nightly-<date>` release points to, or any other branch (`nightly.py prune-builds`).
 - **Refused.** A pull request that changes a path CODEOWNERS gives to the council (`.github/`, `tools/ci/`, the
-  signing and update code, `launcher/src/backend.rs`, `launcher/links.json`…), more than 30 in a set, and more than
+  signing and update code, `https://github.com/sunrise-org/sunrise-launcher/blob/main/src/backend.rs`, `https://github.com/sunrise-org/sunrise-launcher/blob/main/links.json`…), more than 30 in a set, and more than
   12 builds a day (the scheduled one always runs; 6 until 2026-10-28).
 - **No repository role.** Reviewers need no permission on the repository: the list file and the workflow are the
   whole of it.

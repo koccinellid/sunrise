@@ -2,7 +2,7 @@
 
 Search Modrinth (CurseForge support is coming soon) for Java mods, modpacks, resource packs and data packs, and Sunrise's
 registry for Sunrise's own mods, modpacks, resource packs and shader packs; see how well each one runs before installing it, and install it with its checksum checked. This is item 16 of the roadmap and issue #577. The code is in
-`launcher/src/browser.rs` and `launcher/src/browser/`.
+`https://github.com/sunrise-org/sunrise-launcher/blob/main/src/browser.rs` and `https://github.com/sunrise-org/sunrise-launcher/tree/main/src/browser/`.
 
 ## What it offers
 
@@ -140,7 +140,7 @@ browser installed from it, the URLs asked for in one request (`GET /projects?ids
 (`fabric.mod.json`/`quilt.mod.json` `icon`, `mods.toml` `logoFile`), read from the jar off the UI thread and scaled to
 the row; else a generic glyph. The tab builds only the rows near the view, so a pack of hundreds costs what a few do.
 
-**Vanilla Minecraft** is marked with Sunrise's own grass block (`launcher/assets/logos/grass-block.png`, drawn by
+**Vanilla Minecraft** is marked with Sunrise's own grass block (`https://github.com/sunrise-org/sunrise-launcher/blob/main/assets/logos/grass-block.png`, drawn by
 `tools/launcher_grass_block.py` from our palette, not from Mojang's textures): the game-version filter, the Java Edition
 tab and plain Minecraft instances show it. No Mojang file or logo is in the launcher or the repository.
 

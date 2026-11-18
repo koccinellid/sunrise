@@ -152,7 +152,7 @@ Sunrise's own extras and its product, and every built-in address of an outside s
   telemetry and benchmark uploads, releases and updates, the hosting supervisor, the launcher.
 - **Examples:** `sunrise-addresses`, `sunrise-friends`, `sunrise-relay`, `sunrise-telemetry`,
   `sunrise-perf-share`, `sunrise-release-sign`, `sunrise-server`, `sunrise-mod-registry`, `sunrise-heartbeat`,
-  `sunrise-official`, `sunrise-discord`, `launcher/`. Still in engine crates today:
+  `sunrise-official`, `sunrise-discord`, `https://github.com/sunrise-org/sunrise-launcher`. Still in engine crates today:
   `game/extras.rs` and `game/extras/`, `extras_ui.rs`, `pvp.rs`.
 - **Rules:**
   - It uses the platform's public API only, never the engine.
@@ -204,7 +204,7 @@ and Parts registration state; it is not yet a stateless or unsafe-free interface
 | A Sunrise extra (a setting, screen or HUD element vanilla doesn't have) | Sunrise | its own module behind `sunrise-extras`, built on platform API; or an optional native mod that players add themselves |
 | Anything that talks to playsunrise.net or a third-party service by itself | Sunrise | a Sunrise crate, its address in `sunrise-addresses` |
 | Discord, telemetry, Play with Friends | Sunrise | `sunrise-discord`, `sunrise-telemetry`..., behind `sunrise-extras` |
-| A launcher page | Sunrise | `launcher/src/` |
+| A launcher page | Sunrise | `https://github.com/sunrise-org/sunrise-launcher/tree/main/src/` |
 | A harness, script or dev tool | tool | `tools/`, `xtask/` |
 | A new crate | its layer | give it a layer in `tools/layers.json` in the same PR |
 
@@ -247,10 +247,10 @@ it. Mods loaded as WebAssembly run as separate modules, not linked into the exec
 |---|---|
 | The launcher's release builds, every platform and format: Linux `.tar.gz` and AppImage, macOS `.zip` and signed `.dmg`, Windows `.zip` and `sunrise-launcher-setup*.exe` | `.github/workflows/launcher.yml` |
 | GitHub releases (`launcher@X.Y.Z`) | `launcher.yml`'s release job, `tools/release_train.py` |
-| playsunrise.net's download page | horizon-rust/horizon-site, reading `launcher/links.json` and the releases |
-| The launcher's self-update | `launcher/src/backend.rs` (`stage_update`), `launcher/src/update_handoff.rs`, `launcher/src/nightly.rs` |
+| playsunrise.net's download page | horizon-rust/horizon-site, reading `https://github.com/sunrise-org/sunrise-launcher/blob/main/links.json` and the releases |
+| The launcher's self-update | `https://github.com/sunrise-org/sunrise-launcher/blob/main/src/backend.rs` (`stage_update`), `https://github.com/sunrise-org/sunrise-launcher/blob/main/src/update_handoff.rs`, `https://github.com/sunrise-org/sunrise-launcher/blob/main/src/nightly.rs` |
 | The game builds the launcher installs, so the in-game part reaches every player | `.github/workflows/nightly-build.yml`, `release.yml`, `game-build.yml` |
-| The links the launcher and the site read (Discord, website) | `launcher/links.json` |
+| The links the launcher and the site read (Discord, website) | `https://github.com/sunrise-org/sunrise-launcher/blob/main/links.json` |
 
 These stay without it: builds of this repository from source, sunrise-plain, and `packaging/server/install.sh`
 and `install.ps1` (the dedicated server). The server's anticheat and chat filter are platform features.
@@ -303,7 +303,7 @@ same shape: registered before the game runs, read-only after.
 **What players get.** The release builds (`game-build.yml`, so the nightly and the release; `tools/ci/build-musl.sh`)
 build `sunrise-official` and ship it as `sunrise-client`, the name the launcher and players know. The launcher's
 native-mod builds of the game do the same, and its generated executable for trait mods calls
-`sunrise_official::register()` (`launcher/src/native_mods/api.rs`). The dedicated server build (`sunrise-engine`)
+`sunrise_official::register()` (`https://github.com/sunrise-org/sunrise-launcher/blob/main/src/native_mods/api.rs`). The dedicated server build (`sunrise-engine`)
 stays sunrise-client's, with no Sunrise part. sunrise-client's own executable, the one `cargo run -p
 sunrise-client`, the harnesses and sunrise-plain build, has none either. The first part that moved this way is the
 "I'm playing" ping (`sunrise-heartbeat`).
@@ -562,7 +562,7 @@ Controllers and replay recording are platform ([above](#controllers-replays-and-
 ## The checks
 
 `python3 tools/check_layers.py` runs in CI's verify job and in `tools/pr_ready.py`. It reads the `cargo metadata` of the
-four workspaces `tools/layers.json` lists (the game, `launcher/`, `crates/sunrise-mod-registry/` and
+four workspaces `tools/layers.json` lists (the game, `https://github.com/sunrise-org/sunrise-launcher`, `crates/sunrise-mod-registry/` and
 `crates/sunrise-telemetry-server/`; no build, about a second) and [`tools/layers.json`](../tools/layers.json), which
 gives every crate its layer. It fails when:
 
@@ -629,7 +629,7 @@ Sunrise's own and third-party addresses (Sunrise layer):
 | `playsunrise.net/perf`, `playsunrise.net/api/perf/captures` | the performance viewer Open shows a saved capture in, and the upload behind Share (`SUNRISE_PERF_VIEWER`, `SUNRISE_PERF_CAPTURES` override them) | `sunrise-addresses`, used by `sunrise-perf-share` |
 | `telemetry.playsunrise.net` | opt-in telemetry, the "I'm playing" ping, benchmark uploads | `sunrise-addresses` (#12993) |
 | `stun.cloudflare.com`, `stun.l.google.com` | Play with Friends NAT discovery | `sunrise-addresses` (#12993) |
-| `sunrise-org.github.io/sunrise-mods`, `github.com/sunrise-org/sunrise-mods`, `playsunrise.net/mods` | Sunrise's mod registry: the launcher's index, icons and screenshots, report form and project pages (`SUNRISE_MOD_INDEX` overrides the index) | `sunrise-addresses`, used by `launcher/src/browser/` |
+| `sunrise-org.github.io/sunrise-mods`, `github.com/sunrise-org/sunrise-mods`, `playsunrise.net/mods` | Sunrise's mod registry: the launcher's index, icons and screenshots, report form and project pages (`SUNRISE_MOD_INDEX` overrides the index) | `sunrise-addresses`, used by `https://github.com/sunrise-org/sunrise-launcher/tree/main/src/browser/` |
 | `horizon-rust.github.io/horizon-mods`, `github.com/horizon-rust/horizon-mods` | Horizon's mod registry, index and files: the registry tool's defaults and the submission service's | `sunrise-mods/src/index*.rs`, `cargo-sunrise-mod`, `sunrise-mod-registry` |
 | `api.modrinth.com`, `cdn.modrinth.com` | the in-game resource pack browser, modpack porting | `pack_browser.rs`, `sunrise-port-pack` |
 | `github.com`, `raw.githubusercontent.com`, `gitlab.com`, `maven.neoforged.net` | modpack porting's sources | `sunrise-port-pack` |
@@ -637,7 +637,7 @@ Sunrise's own and third-party addresses (Sunrise layer):
 | `playsunrise.net` | the download link shown with no resources | `no_resources.rs` |
 | `api.github.com`, `discord.com` | hosting: updates, Discord webhooks | `sunrise-server` |
 | `api.github.com`, `uploads.github.com`, `playsunrise.net` | the registry's submission service | `sunrise-mod-registry` |
-| Modrinth, CurseForge, Fabric, Quilt, Forge, NeoForge, GitHub, Microsoft and Xbox sign-in, Tailscale, `discord.gg`, `mclo.gs`, `static.rust-lang.org` | the launcher's browsers, loaders, sign-in, logs and hosting | `launcher/src/`, `launcher/links.json` |
+| Modrinth, CurseForge, Fabric, Quilt, Forge, NeoForge, GitHub, Microsoft and Xbox sign-in, Tailscale, `discord.gg`, `mclo.gs`, `static.rust-lang.org` | the launcher's browsers, loaders, sign-in, logs and hosting | `https://github.com/sunrise-org/sunrise-launcher/tree/main/src/`, `https://github.com/sunrise-org/sunrise-launcher/blob/main/links.json` |
 
 These are not addresses:
 

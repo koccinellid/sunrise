@@ -41,7 +41,7 @@ pub const PLAY: f32 = 56.;
 pub const UNCARDED_STOPS: usize = 3;
 
 /// What drifts or glows over a theme's sky besides the clouds, in the colours the theme gives it
-/// (`launcher/scenery/src/sky.rs` draws it, a few steps a second; nothing under reduced motion or in
+/// (`https://github.com/sunrise-org/sunrise-launcher/blob/main/scenery/src/sky.rs` draws it, a few steps a second; nothing under reduced motion or in
 /// performance mode).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Mood {

@@ -10493,7 +10493,7 @@ impl Game<'_> {
                         }
                         self.debug_charts.frame_times.log(elapsed.as_nanos() as i64);
                         if self.frames == 0 {
-                            // The launcher times Play to this line (launcher/src/perf.rs).
+                            // The launcher times Play to this line (https://github.com/sunrise-org/sunrise-launcher/blob/main/src/perf.rs).
                             log::info!(
                                 "Sunrise: first frame after {} ms",
                                 self.started.elapsed().as_millis()

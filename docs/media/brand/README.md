@@ -20,7 +20,7 @@ on whole units of a 16-unit grid, drawn with crisp edges, so it is sharp at 16 p
 | Output | Used by |
 |--------|---------|
 | `packaging/icons/hicolor/<size>/apps/sunrise.png` (16–512) and `scalable/apps/sunrise.svg` | Linux: copy the tree into `~/.local/share/icons/hicolor` (or `/usr/share/icons/hicolor`) |
-| `packaging/linux/sunrise-launcher.desktop`, `sunrise.desktop` (hand-written) | Linux: the launcher installs both and the hicolor icons itself, under `$XDG_DATA_HOME` (`~/.local/share`), with its own path in `Exec` (`launcher/src/desktop.rs`; `sunrise-launcher desktop-entry --remove` takes them out). Wayland matches the windows' app ids `sunrise-launcher` and `sunrise` |
+| `packaging/linux/sunrise-launcher.desktop`, `sunrise.desktop` (hand-written) | Linux: the launcher installs both and the hicolor icons itself, under `$XDG_DATA_HOME` (`~/.local/share`), with its own path in `Exec` (`https://github.com/sunrise-org/sunrise-launcher/blob/main/src/desktop.rs`; `sunrise-launcher desktop-entry --remove` takes them out). Wayland matches the windows' app ids `sunrise-launcher` and `sunrise` |
 | `packaging/icons/sunrise.ico` | Windows: embedded in `sunrise-client.exe`, its tools and `sunrise-launcher.exe` as icon resource 1 (`build.rs` of each, Windows builds only) |
 | `packaging/icons/sunrise.icns` | macOS: `Sunrise.app/Contents/Resources/sunrise.icns`, packaged with the .dmg by `packaging/macos/package.sh` |
 | `crates/sunrise-theme/icons/sunrise-64.png` | the game window's icon at run time (X11 and Windows title bars, `window::icon`) |

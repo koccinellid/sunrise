@@ -51,7 +51,7 @@ All requests use HTTPS and JSON except the two OAuth calls (form-encoded):
    The device code page takes whatever Microsoft account the browser is signed in to, and the flow has
    no option for an account picker (no `prompt`, no `login_hint`). To add a different account without any
    change to the Azure app (#3786), the sign-in panel offers **Open in private window**: the default
-   browser's private window (`launcher/src/private_window.rs`: the `https` ProgId on Windows, LaunchServices
+   browser's private window (`https://github.com/sunrise-org/sunrise-launcher/blob/main/src/private_window.rs`: the `https` ProgId on Windows, LaunchServices
    on macOS, `xdg-settings` on Linux; `--incognito`, `--inprivate`, `--private`, `--private-window`) has no
    Microsoft session. Safari and unknown browsers get **Copy link** and a hint instead. **Use a different
    Microsoft account** opens the end-session page `…/consumers/oauth2/v2.0/logout` and then the code page.
@@ -91,7 +91,7 @@ possible; the launcher just doesn't offer it on its own.
   the gate's screen once when the launcher opens: why Sunrise needs the account ("like other
   launchers"), and Sign in, which shows
   the device code on the same screen. It comes back whenever Play is refused; Not now closes it,
-  and Home keeps a Sign in row (`launcher/src/owner_page.rs`).
+  and Home keeps a Sign in row (`https://github.com/sunrise-org/sunrise-launcher/blob/main/src/owner_page.rs`).
 - **The answer lives with the tokens.** Each account's keychain item keeps the last answer
   (`owns`), so accounts.json can't say yes. Where there is no keychain the answer sits in the
   secrets file with the tokens; a player can edit that file, as they can write keychain items with
@@ -115,7 +115,7 @@ possible; the launcher just doesn't offer it on its own.
 Decided 2026-10-27. This is the only exception to "Sunrise never downloads the game", and it
 applies only on the player's machine, for an account the owner gate just asked about. The
 launcher's "Download and prepare" (`sunrise-launcher prepare --download`) fetches the pinned
-version straight from Mojang (`launcher/src/mojang.rs`): the version file, the client jar,
+version straight from Mojang (`https://github.com/sunrise-org/sunrise-launcher/blob/main/src/mojang.rs`): the version file, the client jar,
 libraries, the asset index and the assets, each checked against the size and sha1 Mojang lists.
 They go to `minecraft/` in the launcher's data folder, and the preparation runs as usual. The
 download can be cancelled and goes on where it stopped. CI, agents, harnesses and the repo never
