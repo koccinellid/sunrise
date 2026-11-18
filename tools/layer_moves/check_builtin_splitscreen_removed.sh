@@ -2,12 +2,9 @@
 set -euo pipefail
 pattern='split[- _]?screen|SUNRISE_SPLIT|SUNRISE_ACCOUNT_SESSIONS|sunrise\.(split\.|pages\.(open\.)?split_)|(super|crate|runtime)::split::|\bmod split\b|split::(Split|Hud)|\bsplit_(setup|settings|window|auth|in_main_window|guest|hud|layout|map|profiles|ui|players|seat|role)\b|\b(SplitSetup|SplitHelp|SplitRole|PadRouter|paced_by_split|paced_elsewhere|join_split|leave_split|keyboard_handoff|SPLIT_(TWO|THREE|SETTINGS)|open_split_settings)\b'
 # git grep exits 1 for no matches, but any other failure must fail the check.
-raw=$(git grep -InEi "$pattern" -- crates launcher) || test "$?" -eq 1
-scrub=$(printf '%s\n' "$raw" | grep -E '^launcher/src/run_leases\.rs:[0-9]+:    command\.env_remove\("SUNRISE_ACCOUNT_SESSIONS"\);$')
-test "$(printf '%s\n' "$scrub" | wc -l)" -eq 1
-extra=$(printf '%s\n' "$raw" | grep -Fxv "$scrub" || test "$?" -eq 1)
-test -z "$extra" || { printf '%s\n' "$extra"; exit 1; }
-paths=$(git ls-files -- crates launcher | grep -Ei '(^|/)(splitscreen|split/|split_(layout|map|profiles|ui))' || test "$?" -eq 1)
+raw=$(git grep -InEi "$pattern" -- crates) || test "$?" -eq 1
+test -z "$raw" || { printf '%s\n' "$raw"; exit 1; }
+paths=$(git ls-files -- crates | grep -Ei '(^|/)(splitscreen|split/|split_(layout|map|profiles|ui))' || test "$?" -eq 1)
 test -z "$paths" || { printf '%s\n' "$paths"; exit 1; }
 # Check identifier tokens, not whole lines: an ordinary split_* token must not mask
 # another token on the same line. These names are unrelated data, text, or render splits.
@@ -26,8 +23,8 @@ ordinary=(
     split_top_level split_type split_url split_uses_parent_random_and_width_for_both_cube_types split_variant
     split_versions split_w split_whitespace split_x
 )
-ids=$(git grep -IohE '\b(split_[[:alnum:]_]+|Split[A-Z][[:alnum:]_]*|SPLIT_[[:alnum:]_]+)\b' -- crates launcher) || test "$?" -eq 1
+ids=$(git grep -IohE '\b(split_[[:alnum:]_]+|Split[A-Z][[:alnum:]_]*|SPLIT_[[:alnum:]_]+)\b' -- crates) || test "$?" -eq 1
 extra=$(comm -23 <(printf '%s\n' "$ids" | sed '/^$/d' | LC_ALL=C sort -u) \
     <(printf '%s\n' "${ordinary[@]}" | LC_ALL=C sort -u))
 test -z "$extra" || { printf '%s\n' "$extra"; exit 1; }
-printf 'Only approved credential scrub: %s\nNo other matches or feature paths.\n' "$scrub"
+printf 'No matches or feature paths.\n'

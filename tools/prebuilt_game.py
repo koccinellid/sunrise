@@ -33,6 +33,7 @@ import tarfile
 import tempfile
 import tomllib
 import time
+import urllib.request
 from pathlib import Path
 
 
@@ -652,7 +653,7 @@ def smoke(out: Path) -> None:
     if installed.exists():
         shutil.rmtree(installed)
     installed.mkdir()
-    # The game's libraries load from beside the executable (launcher/src/native_mods/prebuilt.rs `compile`).
+    # The game's libraries load from beside the executable (sunrise-launcher's src/native_mods/prebuilt.rs `compile`).
     origin = {"linux": ["-Wl,-rpath,$ORIGIN"], "darwin": ["-Wl,-rpath,@executable_path"]}.get(sys.platform, [])
     identity = json.loads((out / IDENTITY).read_text())
     release = next(line.removeprefix("release: ") for line in identity["rustc"].splitlines() if line.startswith("release: "))
@@ -739,7 +740,7 @@ def install_package(folder: Path, mod: str, source: str, dependencies: str) -> N
 
 
 def runtime_libraries(out: Path) -> list[Path]:
-    """What the launcher installs beside the executable (launcher/src/native_mods/prebuilt.rs `runtime_libraries`),
+    """What the launcher installs beside the executable (sunrise-launcher's src/native_mods/prebuilt.rs `runtime_libraries`),
     by the same rule: every shared library the identity's `runtime` slice records under `deps/`, std, and on Windows
     the MinGW runtime the GNU DLLs import. So `start` fails when the record misses a library the game loads."""
     runtime = json.loads((out / IDENTITY).read_text())["slices"]["runtime"]
@@ -787,9 +788,15 @@ def start(out: Path) -> None:
             (game / "eula.txt").write_text("eula=true\n")
             executable = installed / EXECUTABLE
             if sys.platform == "darwin":
-                # Use the launcher's actual bundle preparation, not a second list of libraries.
+                # Use the launcher's actual bundle preparation, not a second list of libraries: its source from the
+                # sunrise-launcher commit pinned in tools/ci/launcher-pin.
                 bundle_source = scratch / "bundle.rs"
-                module = json.dumps(str(ROOT / "launcher/src/game_app.rs"))
+                pin = (ROOT / "tools/ci/launcher-pin").read_text().strip()
+                game_app = scratch / "game_app.rs"
+                game_app.write_bytes(urllib.request.urlopen(
+                    f"https://raw.githubusercontent.com/sunrise-org/sunrise-launcher/{pin}/src/game_app.rs",
+                    timeout=60).read())
+                module = json.dumps(str(game_app))
                 bundle_source.write_text(
                     'mod i18n { pub fn tr(s: &str) -> &str { s } }\n'
                     'mod shortcut { pub fn xml(s: &str) -> String { s.to_owned() } }\n'

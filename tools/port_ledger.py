@@ -973,7 +973,7 @@ def parse_rust(path):
 
 
 def rust_files():
-    out = subprocess.run(["git", "ls-files", "crates/*.rs", "launcher/*.rs"], cwd=ROOT, capture_output=True, text=True).stdout
+    out = subprocess.run(["git", "ls-files", "crates/*.rs"], cwd=ROOT, capture_output=True, text=True).stdout
     return [f for f in out.split() if f.endswith(".rs")]
 
 
@@ -2640,7 +2640,7 @@ def changed_ranges(base):
     mb = subprocess.run(["git", "merge-base", base, "HEAD"], cwd=ROOT, capture_output=True, text=True)
     if mb.returncode:
         sys.exit(f"No merge base with {base}: {mb.stderr.strip()}")
-    diff = subprocess.run(["git", "diff", "-U0", mb.stdout.strip(), "--", "crates", "launcher"],
+    diff = subprocess.run(["git", "diff", "-U0", mb.stdout.strip(), "--", "crates"],
                           cwd=ROOT, capture_output=True, text=True).stdout
     ranges, path = defaultdict(list), None
     for line in diff.splitlines():

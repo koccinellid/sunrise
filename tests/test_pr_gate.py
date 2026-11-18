@@ -84,7 +84,6 @@ class WorkflowTests(unittest.TestCase):
             with self.subTest(job=name):
                 self.assertIn("(needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true')",
                               self.job(name))
-        self.assertIn("needs.changes.outputs.heavy == 'true'", self.job("launcher"))
 
     def test_cheap_jobs_run_without_the_heavy_gate(self):
         # verify-static runs outside the gate too: only where it runs depends on the gate.
@@ -93,7 +92,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertNotRegex(self.job("format"), r"cargo (clippy|build|test|check)")
 
     def test_a_dispatched_head_is_checked_out_with_a_read_only_token_and_reported_apart(self):
-        for name in ("lint", "verify", "verify-static", "launcher"):
+        for name in ("lint", "verify", "verify-static"):
             with self.subTest(job=name):
                 self.assertIn("ref: ${{ needs.changes.outputs.pr_sha }}", self.job(name))
                 self.assertNotIn("statuses: write", self.job(name))
@@ -107,7 +106,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn(f"trusted: ${{{{ steps.gate.outputs.trusted || (({SAME_REPO}) && 'true' || 'false') }}}}",
                       self.job("changes"))
         self.assertNotIn("github.event.pull_request.head.repo.full_name == github.repository) &&", self.job("lint"))
-        for name in ("lint", "verify", "verify-static", "launcher", "boat-watch"):
+        for name in ("lint", "verify", "verify-static", "boat-watch"):
             body = self.job(name)
             if "head.repo.full_name" in body:
                 self.fail(f"{name} decides trust itself instead of needs.changes.outputs.trusted")
@@ -125,7 +124,7 @@ class WorkflowTests(unittest.TestCase):
 
     def test_an_untrusted_head_never_gets_our_runners(self):
         # A fork's dispatched pr: trusted is false and the runner script answers self_hosted=false.
-        for name in ("lint", "verify", "verify-static", "launcher"):
+        for name in ("lint", "verify", "verify-static"):
             for rust, forced, label, pool in itertools.product(("true", "false"), ("true", "false"),
                                                                ("", "boat"), ("all", "")):
                 outputs = {"rust_required": rust, "forced_github": forced, "hosted_label": label,
@@ -176,26 +175,12 @@ class WorkflowTests(unittest.TestCase):
     def test_windows_jobs_run_daily_and_by_dispatch_only(self):
         import yaml
 
-        workflow = yaml.safe_load((ROOT / ".github/workflows/launcher-windows-check.yml").read_text())
+        workflow = yaml.safe_load((ROOT / ".github/workflows/windows-runtime-leases.yml").read_text())
         # GitHub's Windows runners: no push, pull request, rollup or sync waits on them; the daily run calls it.
         self.assertEqual(set(workflow[True]), {"workflow_call", "workflow_dispatch"})
         jobs = workflow["jobs"]
-        for name in ("test", "runtime-leases", "launcher-processes"):
+        for name in ("runtime-leases",):
             self.assertEqual(jobs[name]["if"], "inputs.commit != '' || github.event_name == 'workflow_dispatch'")
-
-    def test_each_launcher_test_target_runs_once_and_spawning_ones_run_daily(self):
-        import yaml
-
-        jobs = yaml.safe_load((ROOT / ".github/workflows/launcher-windows-check.yml").read_text())["jobs"]
-        def targets(job):
-            return {arg for step in jobs[job]["steps"] for arg in re.findall(r"--test (\w+)", step.get("run", ""))}
-        spawning = {path.stem for path in (ROOT / "launcher/tests").glob("*.rs")
-                    if "CARGO_BIN_EXE" in path.read_text() or "Command::new" in path.read_text()}
-        every = {path.stem for path in (ROOT / "launcher/tests").glob("*.rs")}
-        self.assertEqual(targets("launcher-processes"), spawning)
-        self.assertEqual(targets("test"), every - spawning)
-        # The product reserves the stack the debug launcher needs (#4052): no release-only workaround.
-        self.assertNotIn("--release", next(s["run"] for s in jobs["launcher-processes"]["steps"] if "--test" in s.get("run", "")))
 
     def test_other_pull_request_workflows_skip_what_compiles_for_forks(self):
         for workflow, jobs in (("cargo-sunrise-mod.yml", ("build",)), ("modding-book.yml", ("book",))):

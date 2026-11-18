@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check that built-in outside addresses stay where docs/layers.md says (the "Built-in addresses" section).
 
-Reads the string literals of shipped Rust (every crate tools/layers.json doesn't call a tool, and the launcher),
+Reads the string literals of shipped Rust (every crate tools/layers.json doesn't call a tool),
 without tests, examples or #[cfg(test)] modules, and finds the hosts in them: a URL's host anywhere in a string,
 or a whole string that is a host name (`play.playsunrise.net`, `stun.l.google.com:19302`). Placeholders
 (`example.com`, `*.test`, `*.invalid`, `localhost`) and loopback, private and documentation IPs are skipped.
@@ -157,7 +157,7 @@ def module_dir(path):
 def shipped_files():
     """The shipped Rust files, relative to the root, minus test modules."""
     layers = json.loads((ROOT / "tools" / "layers.json").read_text())["crates"]
-    roots = [ROOT / "launcher" / "src"]
+    roots = []
     for crate in sorted((ROOT / "crates").iterdir()):
         if (crate / "src").is_dir() and layers.get(crate.name) != "tool":
             roots.append(crate / "src")

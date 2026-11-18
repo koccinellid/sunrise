@@ -3,7 +3,6 @@
 
     python3 tools/release_train.py decide --kind game [--head SHA] [--force]
     python3 tools/release_train.py decide --kind game --channel nightly|snapshot [--head SHA] [--force] [--daily] [--exception TEXT]
-    python3 tools/release_train.py decide --kind launcher
     python3 tools/release_train.py notes --kind game --tag v2026.10.15 --out dist/notes
     python3 tools/release_train.py gate --kind game --smoke dist/smoke-test.json [--blockers]   # before publishing
 
@@ -19,17 +18,15 @@ group no push cancels (gate_again); otherwise it always builds, as snapshot-<dat
 cap, pause or release-blocker: a snapshot is for testing main, never for players).
 
 A kind releases when a pull request merged into main since its last published release changed one of its
-player-facing paths (GAME_PATHS, LAUNCHER_PATHS), once BATCH of them are waiting and the newest merged at least
+player-facing paths (GAME_PATHS), once BATCH of them are waiting and the newest merged at least
 DEBOUNCE ago (a burst of merges becomes one release), or once the oldest has waited MAX_WAIT (a lone fix still ships),
 or at once when one of those pull requests is labelled release-now. Pull requests labelled skip-release (work players don't see) don't count
 towards a release and aren't listed in the notes. RELEASES_PAUSED=1 (a repository variable) stops automatic releases,
 and an open issue labelled release-blocker stops game releases, even forced ones, until it is closed.
 
 Tags (docs/versioning.md): with a release line in .github/release-line.txt (MAJOR.MINOR, e.g. 0.2), game releases
-are vMAJOR.MINOR.PATCH and launcher releases launcher@MAJOR.MINOR.PATCH, each the patch after the last tag of its kind
-on the line (MAJOR.MINOR.0 first: a line's first release goes out without waiting for a pull request). Without the
-file, the tags from before 0.2: vYYYY.MM.DD, then .01, .02 the same UTC day, and launcher-vX.Y.Z, the patch after
-the last launcher tag or the next minor when a merged pull request is labelled feature. Every 0.2 tag is newer than
+are vMAJOR.MINOR.PATCH, each the patch after the last tag on the line (MAJOR.MINOR.0 first: a line's first release goes out without waiting for a pull request). Without the
+file, the tags from before 0.2: vYYYY.MM.DD, then .01, .02 the same UTC day. Every 0.2 tag is newer than
 every tag from before (tag_key). Notes:
 "### New" lists the pull requests labelled feature, "### Fixed" the others, "### Known issues" the bullets of
 docs/known-issues.md. Every release is published as the release, GitHub's latest, which launchers, servers and
@@ -70,32 +67,9 @@ SEMVER = r"(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?"
 # Semver's majors stay below this; a date tag's first number is a year.
 FIRST_YEAR = 1000
 GAME_PREFIX = "v"
-LAUNCHER_PREFIX = "launcher@"
-OLD_LAUNCHER_PREFIX = "launcher-v"
 
 # What players run. Documentation (*.md), tests, benchmarks and harness probes (examples/) never count.
 GAME_PATHS = ["crates/", "xtask/", "packaging/", "Cargo.toml", "Cargo.lock", "research-lock.json"]
-# Every crate the launcher builds in (cargo metadata --manifest-path launcher/Cargo.toml: the path packages).
-LAUNCHER_PATHS = [
-    "launcher/",
-    "crates/sunrise-bench/",
-    "crates/sunrise-friends/",
-    "crates/sunrise-mcp/",
-    "crates/sunrise-mod-api-gen/",
-    "crates/sunrise-mod-package/",
-    "crates/sunrise-native-build/",
-    "crates/sunrise-port-pack/",
-    "crates/sunrise-prepare/",
-    "crates/sunrise-release-sign/",
-    "crates/sunrise-system/",
-    "crates/sunrise-theme/",
-    # Its icon, its menu entries and its AppImage are compiled or packaged into a release
-    # (launcher/build.rs, src/desktop.rs, packaging/linux/appimage.sh).
-    "packaging/icons/",
-    "packaging/linux/",
-]
-LAUNCHER_IGNORED = ["launcher/links.json", "launcher/docs/", "launcher/tests/"]
-
 # A game release is GitHub's latest (servers and install.sh follow it), so it is the first release people land on:
 # its notes open with the way to the launcher (#1647). Raw HTML on one line, which GitHub shows and every launcher's
 # notes view and one-line summary skip (pulldown-cmark's HTML events), so launchers never tell players to get
@@ -106,9 +80,6 @@ PLAYERS_FOOTER = ('<h1>Want to play? Download the <a href="https://playsunrise.n
 PLAYERS = (PLAYERS_FOOTER + '<p>The launcher installs this version and keeps it up to date. You need your own copy of '
            'Minecraft: Java Edition. The files below are what the launcher installs, and the dedicated server for '
            'people who host one.</p>')
-LAUNCHER_FOOTER = ("Your launcher updates itself. New here? On Linux take the .AppImage below, make it executable "
-                   "and run it; on Windows and macOS download the archive, extract it and run `sunrise-launcher` "
-                   "(Sunrise.app on macOS). Website: https://playsunrise.net")
 DISCLAIMER = "Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft."
 # An open issue with this label holds every game release (docs/release-flow.md). Only people who can triage the
 # repository can add it, and the issue's text is never read: its author could edit it afterwards.
@@ -149,10 +120,8 @@ def exporters():
 
 def player_facing(path, kind, exporter_paths=frozenset()):
     """Whether a change to path ships to players in a release of this kind."""
-    if path.endswith(".md") or re.match(r"(crates|launcher)/([\w-]+/)?(examples|tests|benches)/", path):
+    if path.endswith(".md") or re.match(r"crates/([\w-]+/)?(examples|tests|benches)/", path):
         return False
-    if kind == "launcher":
-        return any(path.startswith(p) for p in LAUNCHER_PATHS) and not any(path.startswith(p) for p in LAUNCHER_IGNORED)
     return any(path == p or path.startswith(p) for p in GAME_PATHS) or path in exporter_paths
 
 
@@ -168,15 +137,11 @@ def is_game_tag(tag):
     return re.fullmatch(r"v\d{4}\.\d{2}\.\d{2}(\.\d+)?", tag) is not None or semver(tag, GAME_PREFIX) is not None
 
 
-def is_launcher_tag(tag):
-    return re.fullmatch(r"launcher-v\d+\.\d+\.\d+", tag) is not None or semver(tag, LAUNCHER_PREFIX) is not None
-
-
 def tag_key(tag):
     """A tag's place among releases (docs/versioning.md): the tags from before 0.2 (vYYYY.MM.DD[.N],
-    launcher-vX.Y.Z) by their numbers, trailing zeros dropped (v2026.10.19 is v2026.10.19.0); then every 0.2 tag
-    (vX.Y.Z, launcher@X.Y.Z) in semver's order, a pre-release (v0.3.0-rc.1) before its release."""
-    version = semver(tag, GAME_PREFIX) or semver(tag, LAUNCHER_PREFIX)
+    launcher-vX.Y.Z, which the launcher's old releases here carry) by their numbers, trailing zeros dropped (v2026.10.19 is v2026.10.19.0); then every 0.2 tag
+    (vX.Y.Z) in semver's order, a pre-release (v0.3.0-rc.1) before its release."""
+    version = semver(tag, GAME_PREFIX)
     if version is None:
         numbers = [int(part) for part in re.findall(r"\d+", tag)]
         while numbers and numbers[-1] == 0:
@@ -230,17 +195,6 @@ def next_game_tag(tags, today, line=None):
     if not taken:
         return day
     return f"{day}.{max(int(tag.split('.')[3]) if tag.count('.') == 3 else 0 for tag in taken) + 1:02d}"
-
-
-def next_launcher_tag(tags, minor, line=None):
-    """launcher@MAJOR.MINOR.PATCH on a release line (a feature doesn't change the line); before 0.2,
-    launcher-vX.Y.Z, the next patch or with minor the next minor."""
-    if line:
-        return next_on_line(tags, LAUNCHER_PREFIX, line)
-    versions = sorted((tuple(int(part) for part in re.findall(r"\d+", tag)) for tag in tags
-                       if tag.startswith(OLD_LAUNCHER_PREFIX) and is_launcher_tag(tag)), reverse=True)
-    major, minor_, patch = versions[0] if versions else (0, 1, 0)
-    return f"launcher-v{major}.{minor_ + 1}.0" if minor else f"launcher-v{major}.{minor_}.{patch + 1}"
 
 
 def merged_pull_requests(base, head):
@@ -298,12 +252,11 @@ def merged_pull_request_metadata():
 
 
 def published_releases():
-    """Published releases with their tags and dates: no drafts, and no pre-releases (the old Alpha channel's) but
-    the launcher's, which launcher.yml publishes as pre-releases."""
+    """Published releases with their tags and dates: no drafts, and no pre-releases (the old Alpha channel's)."""
     releases = gh_json("api", f"repos/{REPO}/releases?per_page=100", "--paginate")
     flat = [release for page in releases for release in page]
     return [release for release in flat
-            if not release["draft"] and (not release["prerelease"] or is_launcher_tag(release["tag_name"]))]
+            if not release["draft"] and not release["prerelease"]]
 
 
 def open_blockers():
@@ -333,8 +286,7 @@ def gate(report, blockers):
 
 
 def last_release(releases, kind):
-    keep = is_game_tag if kind == "game" else is_launcher_tag
-    ours = [release for release in releases if keep(release["tag_name"])]
+    ours = [release for release in releases if is_game_tag(release["tag_name"])]
     return max(ours, key=lambda release: tag_key(release["tag_name"]), default=None)
 
 
@@ -439,15 +391,12 @@ def known_issues(path=ROOT / "docs" / "known-issues.md"):
 
 def line_intro(kind, version, previous):
     """The paragraph a line's first release (X.Y.0) opens with; the first after the dated tags says what changed."""
-    found = semver(version, GAME_PREFIX if kind == "game" else LAUNCHER_PREFIX)
+    found = semver(version, GAME_PREFIX)
     if not found or found[2] != 0 or found[3] is not None:
         return None
     line = f"{found[0]}.{found[1]}"
-    if previous and semver(previous, GAME_PREFIX if kind == "game" else LAUNCHER_PREFIX):
+    if previous and semver(previous, GAME_PREFIX):
         return f"The first release of Sunrise {line}."
-    if kind == "launcher":
-        return (f"The launcher is numbered with the game from now on: this is launcher {line}.0, the release after "
-                f"launcher {(previous or '').removeprefix(OLD_LAUNCHER_PREFIX) or '0.16'}. Your launcher takes it by itself.")
     before = (previous or "").removeprefix(GAME_PREFIX)
     return (f"Sunrise is numbered from now on: this is Sunrise {line}.0" + (f", the release after {before}" if before else "")
             + ". Releases used to be named after the day they came out; from now on they count up from "
@@ -458,26 +407,15 @@ def line_intro(kind, version, previous):
 
 def notes(kind, version, prs, issues, previous=None, repository="horizon-rust/horizon"):
     """(title, body) of a release. previous: the release before it, for a line's first release."""
-    fork_launcher = kind == "launcher" and repository == "sunrise-org/sunrise"
-    # Sunrise's first launcher release lists no pull requests: before it, every merge of the fork's history counts.
-    first_fork_launcher = fork_launcher and previous is None
-    shown = [] if first_fork_launcher else [pr for pr in prs if pr["paths"] and "skip-release" not in pr["labels"]]
+    shown = [pr for pr in prs if pr["paths"] and "skip-release" not in pr["labels"]]
     new = [pr for pr in shown if "feature" in pr["labels"]]
     fixed = [pr for pr in shown if "feature" not in pr["labels"]]
-    if kind == "game":
-        title = f"Sunrise {version.removeprefix(GAME_PREFIX)}" + (f": {summary(new, fixed)}" if shown else "")
-    else:
-        title = f"Sunrise launcher {version.removeprefix(OLD_LAUNCHER_PREFIX).removeprefix(LAUNCHER_PREFIX)}"
-    intro = None if fork_launcher else line_intro(kind, version, previous)
-    parts = [PLAYERS] if kind == "game" else []
-    if fork_launcher:
-        title = f"Sunrise Launcher {version}"
-        parts.append((ROOT / "packaging/fork-launcher-release-notes.md").read_text().replace("{tag}", version).strip())
+    title = f"Sunrise {version.removeprefix(GAME_PREFIX)}" + (f": {summary(new, fixed)}" if shown else "")
+    intro = line_intro(kind, version, previous)
+    parts = [PLAYERS]
     if intro:
         parts.append(intro)
-    if first_fork_launcher:
-        parts.append("The first release of Sunrise's launcher.")
-    elif not shown:
+    if not shown:
         parts.append("Rebuilt from the latest main.")
     if new:
         parts.append("### New\n" + "\n".join(map(bullet, new)))
@@ -488,8 +426,6 @@ def notes(kind, version, prs, issues, previous=None, repository="horizon-rust/ho
     contributors = sorted({pr["author"] for pr in shown if pr["author"] and pr["author"] != MAINTAINER})
     if contributors:
         parts.append("### Contributors\nThanks to " + ", ".join(f"@{name}" for name in contributors) + ".")
-    if kind == "launcher" and not fork_launcher:
-        parts.append(LAUNCHER_FOOTER)
     if kind == "game":
         parts.append(PLAYERS_FOOTER)
     parts.append("---\n" + DISCLAIMER)
@@ -506,44 +442,6 @@ def published_nightly():
     """The published Nightly (the `nightly` pre-release) as {tag_name, published_at}, or None."""
     out = run("gh", "api", f"repos/{REPO}/releases/tags/nightly", "--jq", "{tag_name, published_at}", check=False)
     return json.loads(out) if out.strip() else None
-
-
-# A launcher built from main after the launcher split (#2080, #2163 and on) asks the installed game's preparer
-# `sunrise-prepare needs` (it came with 9649943c68d) and builds native mods with the SDK's `tool` slices: until a
-# published Nightly and its sdk-<commit> carry both, such a launcher refuses every Nightly players can install, so
-# no launcher is released from main (umceko, 2026-11-17).
-PREPARE_NEEDS = "9649943c68d48a32fe247f1bac750fe4249b93fa"
-# The launcher-split pull requests whose launcher needs both. Rollups merge a member's head unchanged, so a head that
-# contains one's head commit carries it; a launcher without them (a hotfix of launcher@1.0.1) isn't held.
-SPLIT_PULL_REQUESTS = (2080, 2163)
-
-
-def launcher_has_split(head):
-    """Whether `head` contains a launcher-split pull request's head commit."""
-    for number in SPLIT_PULL_REQUESTS:
-        # A failed lookup exits: the hold fails closed.
-        sha = run("gh", "api", f"repos/{REPO}/pulls/{number}", "--jq", ".head.sha").strip()
-        if not subprocess.run(["git", "merge-base", "--is-ancestor", sha, head], cwd=ROOT,
-                              capture_output=True).returncode:
-            return True
-    return False
-
-
-def launcher_waits_for_nightly():
-    """Why a launcher from main can't be released yet, or None once the published Nightly's commit has
-    `sunrise-prepare needs` and its SDK release carries a `tool` slice."""
-    if not run("git", "ls-remote", "--tags", "origin", "refs/tags/nightly").strip():
-        return "no Nightly is published: a launcher from main waits for one with `sunrise-prepare needs` and its SDK's tool"
-    run("git", "fetch", "--quiet", "--force", "origin", "refs/tags/nightly:refs/tags/nightly")
-    sha = run("git", "rev-parse", "refs/tags/nightly^{commit}").strip()
-    if subprocess.run(["git", "merge-base", "--is-ancestor", PREPARE_NEEDS, sha], cwd=ROOT).returncode:
-        return (f"the published Nightly ({sha[:9]}) has no `sunrise-prepare needs`, which a launcher from main asks "
-                "the game: it waits for a newer Nightly")
-    assets = run("gh", "api", f"repos/{REPO}/releases/tags/sdk-{sha}", "--jq", ".assets[].name", check=False).split()
-    if not any(name.startswith("tool-") for name in assets):
-        return (f"sdk-{sha[:9]}, the published Nightly's SDK, has no `tool` slice, which a launcher from main builds "
-                "native mods with: it waits for a newer Nightly")
-    return None
 
 
 SNAPSHOT_RUN = "snapshot build"
@@ -708,7 +606,7 @@ def build_tag(channel, date, sha):
 
 
 def green_main_head(eligible=None):
-    """The newest commit on main whose gate passed: what an automatic launcher release builds."""
+    """The newest commit on main whose gate passed: what an automatic release builds."""
     if REPO == "sunrise-org/sunrise":
         # Runs are ordered by creation, not completion: a late old run must not
         # displace a newer push. Paginate beyond bursts of cancelled main runs.
@@ -746,7 +644,7 @@ def write_outputs(values):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=["decide", "notes", "gate"])
-    parser.add_argument("--kind", choices=["game", "launcher"], required=True)
+    parser.add_argument("--kind", choices=["game"], required=True)
     parser.add_argument("--head", help="the commit to release (default: the newest commit on main whose checks passed)")
     parser.add_argument("--daily", action="store_true",
                         help="decide: the daily run's nightly, without the batch-size and age rules")
@@ -813,23 +711,17 @@ def main():
 
     tags = run("git", "tag", "--list").split()
     line = release_line()
-    prefix = GAME_PREFIX if args.kind == "game" else LAUNCHER_PREFIX
-    new_line = f"{line[0]}.{line[1]}" if line and first_on_line(tags, prefix, line) and not nightly else None
+    new_line = f"{line[0]}.{line[1]}" if line and first_on_line(tags, GAME_PREFIX, line) and not nightly else None
     blockers = open_blockers() if args.kind == "game" else []
     release, reason = decision(args.kind, prs, now, os.environ.get("RELEASES_PAUSED") == "1", args.force, new_line,
                                blockers, daily=args.daily)
     if release and needs_daily and head != daily_head:
         release, reason = False, f"waiting for a fully green daily on {head[:9]}"
-    if release and args.kind == "launcher" and launcher_has_split(head):
-        waiting = launcher_waits_for_nightly()
-        if waiting:
-            release, reason = False, waiting
     urgent = False
     if args.kind == "game":
         release, reason, urgent = nightly_decision(release, reason, prs, nightly_building(),
                                                    len(nightly_builds_today(now.date().isoformat())), args.force)
-    minor = any("feature" in pr["labels"] for pr in prs if pr["paths"])
-    tag = "nightly" if args.kind == "game" else next_launcher_tag(tags, minor, line)
+    tag = "nightly"
     result = {
         "release": release, "reason": reason, "tag": tag, "head": head, "urgent": urgent,
         "last": last["tag_name"] if last else None, "last_published": last["published_at"] if last else None,

@@ -15,7 +15,7 @@ os.chdir(Path(__file__).resolve().parent.parent)
 # that rewrote them would leave a guard that passes because it no longer recognises what it refuses.
 SKIP_FILES = re.compile(
     r"(^|/)(LICENSE[^/]*|LICENSES/.*|NOTICE[^/]*|COPYING[^/]*|CLA\.md|GOVERNANCE\.md)$"
-    r"|^tools/rebrand\.py$|^tests/fixtures/launcher-upstream/identity\.json$"
+    r"|^tools/rebrand\.py$"
     r"|^tools/modding_concept_pages\.py$|^tests/test_modding_concept_pages\.py$"
     r"|^tests/test_modding_book_links\.py$")
 
@@ -52,14 +52,10 @@ LICENCE_LINE = re.compile(r"(?i)copyright|MIT[- ]licen[cs]e|MIT licensed|MIT-Hor
 # Lines that explain or encode a kept name; left as they are.
 KEEP_LINE = re.compile(r'through the rename|Horizon\'s name, kept|before the Sunrise rename|"playhorizon\.dev": "playsunrise\.net"|^\s+"mods/horizon/src/", "mods/horizon-lab/src/"\)\):|sunriselab/" in path or "/dev/horizonlab/"')
 LICENCE_PATH = re.compile(r"(^|/)(LICENSES/[^/]*|[^/]*LICEN[CS]E[^/]*)$")
-# Files whose strings and comments name the earlier launchers themselves: only their code is renamed.
-KEEP_STRINGS = {"launcher/src/identity.rs", "launcher/src/setup_args.rs"}
-STRING = re.compile(r'"(?:[^"\\\n]|\\.)*"|//[^\n]*')
 # Sunrise's package extensions, as a whole word in any spelling (`.hmod`, `"hmod"`, `hmod_path`, `HMOD`; never `chmod`).
 PACKAGE = re.compile(r"(?<![A-Za-z0-9])([Hh])(mod|pack|shader|MOD|PACK|SHADER)(?![A-Za-z0-9])")
-# The journal is history, and roadmap.json is generated from it; the two launcher files name the earlier launchers
-# and stay byte for byte.
-PACKAGE_SKIP = re.compile(r"^roadmap/journal/|^roadmap/roadmap\.json$|^launcher/src/(identity|setup_args)\.rs$")
+# The journal is history, and roadmap.json is generated from it.
+PACKAGE_SKIP = re.compile(r"^roadmap/journal/|^roadmap/roadmap\.json$")
 
 
 def package(text):
@@ -82,66 +78,6 @@ def stashed(pattern, text, convert, mark):
 
     text = convert(pattern.sub(stash, text))
     return re.sub(f"{mark}(\\d+){mark}", lambda m: keep[int(m.group(1))], text)
-
-
-FORK_IF = re.compile(r"cfg!\((?:horizon|sunrise)_fork_launcher\)")
-
-
-def block_end(text, start):
-    depth, i, quote = 0, start, False
-    while i < len(text):
-        c = text[i]
-        if quote:
-            if c == "\\":
-                i += 1
-            elif c == '"':
-                quote = False
-        elif c == '"':
-            quote = True
-        elif c == "{":
-            depth += 1
-        elif c == "}":
-            depth -= 1
-            if depth == 0:
-                return i + 1
-        i += 1
-    return len(text)
-
-
-def fork_branches(text):
-    spans, found = [], FORK_IF.search(text)
-    while found:
-        at = found.start()
-        then_open = text.find("{", at)
-        then_close = block_end(text, then_open)
-        spans.append((then_open, then_close))
-        rest = text[then_close:]
-        stripped = rest.lstrip()
-        if stripped.startswith("else") and stripped[4:].lstrip().startswith("{"):
-            else_open = text.find("{", then_close + (len(rest) - len(stripped)) + 4)
-            spans.append((else_open, block_end(text, else_open)))
-        found = FORK_IF.search(text, then_close)
-    return spans
-
-
-# Both branches of `if cfg!(horizon_fork_launcher) { .. } else { .. }` name Sunrise's and Horizon's real launchers.
-def keep_fork_branches(text, convert):
-    spans = fork_branches(text)
-    if not spans:
-        return convert(text)
-    keep = []
-
-    def stash(m):
-        keep.append(m.group(0))
-        return f"\x04{len(keep) - 1}\x04"
-
-    out, last = [], 0
-    for start, end in spans:
-        out.append(text[last:start])
-        out.append(STRING.sub(stash, text[start:end]))
-        last = end
-    out.append(text[last:])
-    return re.sub("\x04(\\d+)\x04", lambda m: keep[int(m.group(1))], convert("".join(out)))
 
 
 def convert_line(text):
@@ -218,7 +154,7 @@ def main():
             text = raw.decode("utf-8")
         except UnicodeDecodeError:
             continue
-        out = stashed(STRING, text, convert, "\x01") if f in KEEP_STRINGS else keep_fork_branches(text, convert)
+        out = convert(text)
         if f.endswith(".rs"):
             out = convert_rust(out)
         if not PACKAGE_SKIP.search(f):

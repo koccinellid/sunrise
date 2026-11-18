@@ -474,11 +474,11 @@ class DailySummaryTests(unittest.TestCase):
         self.assertEqual(summary.stopped_text({"shard": "x"}), "`x` did not complete")
 
     def test_every_shard_of_the_matrix_must_report_by_name(self):
-        launcher = "shards / ignored-tests-shards (daily-rows-launcher)"
+        launcher = "shards / ignored-tests-shards (daily-rows)"
         self.assertIn(launcher, summary.expected_shards())
         _, out = self.run_summary(Api(GREEN_JOBS), [shard_report()])
         self.assertIn("green=true", out)
-        # Every other job green, the launcher's shard absent: red, with one leg issue naming it.
+        # Every other job green, one shard absent: red, with one leg issue naming it.
         api = Api([entry for entry in GREEN_JOBS if entry["name"] != launcher])
         _, out = self.run_summary(api, [shard_report()])
         self.assertIn("green=false", out)

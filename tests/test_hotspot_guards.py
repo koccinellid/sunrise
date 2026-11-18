@@ -48,9 +48,6 @@ class Repository(unittest.TestCase):
         (self.root / guards.SUMMARY).write_text(summary())
         (self.root / guards.NOTES).parent.mkdir(parents=True)
         (self.root / guards.NOTES).write_text("pub trait Notes {}\n")
-        (self.root / guards.LANG).mkdir(parents=True)
-        for code in ("de", "fr", "es", "it", "ja", "pl", "ru", "uk"):
-            (self.root / guards.LANG / f"{code}.json").write_text("{}\n")
         self.git("init", "-q", "-b", "main")
         self.commit("base")
 
@@ -66,28 +63,6 @@ class Repository(unittest.TestCase):
         with redirect_stdout(io.StringIO()) as out:
             code = guards.main(["--base", "main", *args], root=self.root)
         return code, out.getvalue()
-
-
-class LangGuard(Repository):
-    def translate(self, branch, codes):
-        self.git("switch", "-qc", branch, "main")
-        for code in codes:
-            (self.root / guards.LANG / f"{code}.json").write_text('{"Play": "x"}\n')
-        self.commit(branch)
-
-    def test_a_rollup_of_two_small_translations_passes_and_a_large_one_fails(self):
-        self.translate("first", ["de", "fr", "es", "it"])
-        self.assertEqual(self.run_guards()[0], 0)
-        self.translate("second", ["ja", "pl", "ru", "uk"])
-        self.git("switch", "-qc", "fork-review-rollup-9", "main")
-        self.git("merge", "-q", "--no-ff", "first", "second")
-        code, out = self.run_guards()
-        self.assertEqual(code, 1)
-        self.assertIn(f"{guards.LANG}: this change touches 8 language files", out)
-        self.assertEqual(self.run_guards("--branch", "fork-review-rollup-9")[0], 0)
-        self.assertEqual(self.run_guards("--branch", "upstream-sync-12")[0], 0)
-        self.assertEqual(self.run_guards("--branch", "translations", "--labels", "skip-release sync")[0], 0)
-        self.assertEqual(self.run_guards("--branch", "translations", "--labels", "skip-release")[0], 1)
 
 
 class RenamedSummaryLine(Repository):

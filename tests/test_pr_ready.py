@@ -152,7 +152,7 @@ class PrReadyTests(unittest.TestCase):
                 if wrapper is not None:
                     env["RUSTC_WRAPPER"] = wrapper
                 steps = [pr_ready.Step(name, "printf 'ran\\n'")
-                         for name in ("clippy", "registry clippy", "launcher clippy")]
+                         for name in ("clippy", "registry clippy", "dispatch tests clippy")]
                 with mock.patch.dict(os.environ, env, clear=True), contextlib.redirect_stderr(io.StringIO()) as log:
                     pr_ready.run_script(steps, "local", verbose=False)
                 self.assertEqual([(step.status, step.output.strip()) for step in steps], [("pass", "ran")] * 3)
@@ -251,18 +251,6 @@ class PrReadyTests(unittest.TestCase):
         self.assertTrue(pr_ready.workspace_rust("crates/sunrise-theme/fonts/x.ttf"))
         self.assertTrue(pr_ready.workspace_rust("Cargo.toml"))
         self.assertFalse(pr_ready.workspace_rust("crates/sunrise-client/README.md"))
-        self.assertFalse(pr_ready.workspace_rust("launcher/src/main.rs"))
-        self.assertTrue(pr_ready.launcher_rust("launcher/src/main.rs"))
-        # CI's launcher job also runs for the root workspace's manifests and for its own check.
-        self.assertTrue(pr_ready.launcher_rust("Cargo.lock"))
-        self.assertTrue(pr_ready.launcher_rust("tools/ci/rust_changes.py"))
-        self.assertTrue(pr_ready.launcher_rust("crates/sunrise-prepare/src/lib.rs"))
-        self.assertTrue(pr_ready.launcher_rust("crates/sunrise-theme/src/lib.rs"))
-        self.assertTrue(pr_ready.launcher_rust("crates/sunrise-system/src/lib.rs"))
-        self.assertTrue(pr_ready.launcher_rust("crates/sunrise-mod-api-gen/src/injection.rs"))
-        self.assertFalse(pr_ready.launcher_rust("launcher/links.json"))
-        self.assertFalse(pr_ready.launcher_rust("launcher/README.md"))
-        self.assertFalse(pr_ready.launcher_rust("crates/sunrise-client/src/game.rs"))
 
     def test_crate_checks_do_not_link_unrelated_examples(self):
         with mock.patch.object(pr_ready, "affected_here", return_value=[]):
@@ -329,7 +317,7 @@ class PrReadyTests(unittest.TestCase):
     def test_holder_actor_is_built_before_applicable_tests(self):
         packages = {**PACKAGES, "sunrise-mod-package": "crates/sunrise-mod-package"}
         for path in ("Cargo.lock", "crates/unknown/src/lib.rs",
-                     "crates/sunrise-mod-package/src/holder.rs", "launcher/src/main.rs"):
+                     "crates/sunrise-mod-package/src/holder.rs"):
             with self.subTest(path=path), mock.patch.object(pr_ready, "affected_here", return_value=[]):
                 steps = pr_ready.plan(args(quick=True), "origin/main", {path}, packages,
                                       LIBRARIES, DEPENDENCIES)
@@ -342,7 +330,6 @@ class PrReadyTests(unittest.TestCase):
                 # examples directory in the root test target, including CARGO_TARGET_DIR.
                 self.assertLess(steps.index(actor), next(i for i, step in enumerate(steps)
                                 if step.name.startswith("tests")))
-                self.assertLess(steps.index(actor), steps.index(by_name["launcher tests"]))
         for path in ("README.md", "crates/sunrise-core/src/lib.rs"):
             with self.subTest(path=path), mock.patch.object(pr_ready, "affected_here", return_value=[]):
                 steps = pr_ready.plan(args(quick=True), "origin/main", {path}, packages,
@@ -373,16 +360,6 @@ class PrReadyTests(unittest.TestCase):
                 self.assertEqual(tests.command, "cargo test --locked -p sunrise-client -p sunrise-client-render "
                                                "-p sunrise-mod-api-gen --tests")
 
-    def test_shared_generator_edits_run_launcher_checks(self):
-        with mock.patch.object(pr_ready, "affected_here", return_value=[]):
-            steps = pr_ready.plan(args(quick=True), "origin/main",
-                                  {"crates/sunrise-mod-api-gen/src/injection.rs"},
-                                  {**PACKAGES, "sunrise-mod-api-gen": "crates/sunrise-mod-api-gen"},
-                                  LIBRARIES | {"sunrise-mod-api-gen"}, DEPENDENCIES)
-        by_name = {step.name: step for step in steps}
-        for name in ("launcher rustfmt", "launcher clippy", "launcher tests"):
-            self.assertIsNone(by_name[name].skip)
-
     @unittest.skipUnless(os.name == "nt", "the Windows runner's own jobs")
     def test_a_windows_check_ends_what_it_left_running(self):
         """A check that exits leaving a child that holds its output: the run goes on, and the child is ended."""
@@ -394,69 +371,6 @@ class PrReadyTests(unittest.TestCase):
         self.assertLess(time.monotonic() - started, 60)
         self.assertEqual((step.status, step.output.strip()), ("pass", "left one"))
 
-    @unittest.skipUnless(shutil.which("cargo"), "needs cargo")
-    def test_windows_launcher_checks_include_binary_tests(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            launcher = root / "launcher"
-            (launcher / "src").mkdir(parents=True)
-            (launcher / "Cargo.toml").write_text(
-                '[package]\nname = "launcher-check-fixture"\nversion = "0.1.0"\nedition = "2021"\n[workspace]\n')
-            (launcher / "src/lib.rs").write_text('#[test]\nfn library_passes() {}\n')
-            (launcher / "src/main.rs").write_text(
-                'fn main() {}\n#[test]\nfn binary_fails() { panic!("launcher binary test ran"); }\n')
-            with mock.patch.object(pr_ready, "ROOT", root), \
-                    mock.patch.dict(os.environ, {"CARGO_TARGET_DIR": str(root / "target")}):
-                subprocess.run(["cargo", "generate-lockfile", "--offline"], cwd=launcher, check=True,
-                               capture_output=True)
-                step = pr_ready.Step("launcher tests", "cargo test --locked --lib --bins")
-                pr_ready.run_windows([step], verbose=False)
-            self.assertEqual(step.status, "fail")
-            self.assertIn("launcher binary test ran", step.output)
-
-    @unittest.skipUnless(POSIX_BASH, "needs a bash that is not WSL's")
-    def test_the_launcher_fallback_asks_for_a_feature_the_launcher_has(self):
-        """The macOS fallback must name gpui_platform/runtime_shaders: gpui_platform is launcher/Cargo.toml's
-        rename of gpui-fast-platform, whose runtime_shaders reaches gpui_macos; the gpui rename (gpui-fast)
-        has no such feature, and neither has Linux any fallback."""
-        with mock.patch.object(pr_ready, "affected_here", return_value=[]):
-            steps = pr_ready.plan(args(quick=True), "origin/main", {"launcher/src/main.rs"},
-                                  PACKAGES, LIBRARIES, DEPENDENCIES)
-        command = {step.name: step for step in steps}["launcher clippy"].command
-        for uname, metal, features in (("Darwin", False, ["--features", "gpui_platform/runtime_shaders"]),
-                                        ("Darwin", True, []), ("Linux", False, [])):
-            with self.subTest(uname=uname, metal=metal):
-                self.assertEqual(self.launcher_step_arguments(command, uname, metal),
-                                 ["clippy", "--keep-going", "--all-targets", "--locked", *features,
-                                  "--message-format=json-diagnostic-rendered-ansi", "--", "--cap-lints=warn"])
-
-    def launcher_step_arguments(self, command, uname, metal):
-        """Run a launcher step's shell snippet with fake uname, xcrun, pkg-config and cargo; what the fake
-        cargo receives is the snippet's observable behaviour."""
-        with tempfile.TemporaryDirectory() as fake_bin:
-            scripts = {"uname": f"#!/bin/sh\necho {uname}\n",
-                       "xcrun": f"#!/bin/sh\nexit {0 if metal else 1}\n",
-                       # xkbcommon found: Linux never looks for nix-shell (a NixOS host would have it).
-                       "pkg-config": "#!/bin/sh\nexit 0\n",
-                       "cargo": '#!/bin/sh\nif [ "$1" = metadata ]; then echo \'{"workspace_members": []}\'; else printf \'%s\\n\' "$@"; fi\n'}
-            for name, script in scripts.items():
-                path = os.path.join(fake_bin, name)
-                # LF on every host: text mode makes the shebang "#!/bin/sh\r" on
-                # Windows, which bash cannot run, so the fake names are skipped.
-                with open(path, "w", newline="\n") as file:
-                    file.write(script)
-                os.chmod(path, 0o755)
-            env = dict(os.environ)
-            if os.name == "nt":
-                # Git Bash puts /usr/bin ahead of every Windows PATH entry, so a fake
-                # named uname can only win when the shell itself puts its folder first.
-                command = 'export PATH="$(cygpath -u "$FAKE_BIN"):$PATH"\n' + command
-                env["FAKE_BIN"] = fake_bin
-            else:
-                env["PATH"] = fake_bin + os.pathsep + os.environ["PATH"]
-            return subprocess.run([BASH, "-c", command], capture_output=True, text=True,
-                                  cwd=pr_ready.ROOT, env=env, check=True).stdout.splitlines()
-
     def test_python_tests_always_run(self):
         with mock.patch.object(pr_ready, "affected_here", return_value=[]):
             steps = pr_ready.plan(args(quick=True), "origin/main", {"crates/sunrise-core/src/lib.rs"},
@@ -464,7 +378,7 @@ class PrReadyTests(unittest.TestCase):
         self.assertIsNone({step.name: step for step in steps}["Python tests"].status)
 
     def test_non_rust_changes_skip_workspace_checks(self):
-        for path in ("README.md", "tools/pr_ready.py", "launcher/src/main.rs"):
+        for path in ("README.md", "tools/pr_ready.py"):
             with self.subTest(path=path), mock.patch.object(pr_ready, "affected_here", return_value=[]):
                 steps = pr_ready.plan(args(quick=True), "origin/main", {path}, PACKAGES, LIBRARIES, DEPENDENCIES)
                 by_name = {step.name: step for step in steps}
@@ -538,22 +452,19 @@ class PrReadyTests(unittest.TestCase):
         self.assertEqual(pr_ready.dependent_crates(["core"], dependencies), ["build", "core", "dev", "optional"])
 
     def test_scope_warns_on_mixed_areas(self):
-        self.assertEqual(pr_ready.scope_warnings({"crates/sunrise-theme/src/lib.rs", "launcher/src/theme.rs"}), [])
-        self.assertEqual(pr_ready.scope_warnings({"crates/sunrise-client/src/game.rs", "launcher/src/main.rs",
-                                                  ".github/workflows/ci.yml"}),
-                         ["mixes CI, game, launcher"])
+        self.assertEqual(pr_ready.scope_warnings({"crates/sunrise-theme/src/lib.rs", "crates/sunrise-client/src/game.rs"}), [])
+        self.assertEqual(pr_ready.scope_warnings({"crates/sunrise-client/src/game.rs", ".github/workflows/ci.yml"}),
+                         ["mixes CI, game"])
 
     def test_cargo_lock_changes_only_with_a_manifest(self):
         self.assertIsNone(pr_ready.lock_problem({"crates/sunrise-core/src/lib.rs"}))
         self.assertIsNone(pr_ready.lock_problem({"Cargo.lock", "crates/sunrise-client/Cargo.toml"}))
-        self.assertIsNone(pr_ready.lock_problem({"launcher/Cargo.lock", "crates/sunrise-theme/Cargo.toml"}))
         self.assertIn("Cargo.lock", pr_ready.lock_problem({"Cargo.lock", "crates/sunrise-core/src/lib.rs"}))
 
     def test_label_follows_what_players_get(self):
         self.assertEqual(pr_ready.suggested_label({"tools/pr_ready.py", "CONTRIBUTING.md"}), "`skip-release`")
         self.assertEqual(pr_ready.suggested_label({"crates/sunrise-world/examples/probe.rs"}), "`skip-release`")
         self.assertIn("feature", pr_ready.suggested_label({"crates/sunrise-client/src/game.rs"}))
-        self.assertIn("feature", pr_ready.suggested_label({"launcher/src/main.rs"}))
 
     def test_affected_harnesses_come_from_the_parity_runner(self):
         found = {"food": "tools/test_food_parity.py", "datafix#1": "tools/test_datafix_parity.py",
@@ -616,7 +527,6 @@ class PrReadyTests(unittest.TestCase):
         self.assertIn("2 affected, to run in CI (--quick): food, light", harness.detail)
         by_name = {step.name: step for step in steps}
         self.assertIn("tests: sunrise-world", by_name)
-        self.assertEqual(by_name["launcher clippy"].status, "skip")
         self.assertIsNone(by_name["clippy"].status)
         with mock.patch.object(pr_ready, "affected_here", return_value=["food"]):
             steps = pr_ready.plan(args(host="macmini", harnesses=True), "origin/main", changed, {"sunrise-world": "crates/sunrise-world"}, {"sunrise-world"}, {})

@@ -75,13 +75,13 @@ class GateFailuresTests(unittest.TestCase):
 
     def test_independent_checks_continue_but_failed_setup_stops_them(self):
         workflow = yaml.load((ROOT / ".github/workflows/dyna-ci.yml").read_text(), Loader=yaml.BaseLoader)
-        for job in ("lint", "verify", "verify-static", "launcher"):
+        for job in ("lint", "verify", "verify-static"):
             steps = workflow["jobs"][job]["steps"]
             ids = {s.get("id") for s in steps}
             for step in steps:
                 for dependency in re.findall(r"steps\.([\w-]+)\.", step.get("if", "")):
                     self.assertIn(dependency, ids, (job, step))
-            checks = [s for s in steps[steps.index(next(s for s in steps if s.get("id") == "setup"))+1:] if s.get("name", "").startswith(("Lint ", "Test Rust", "Test launcher"))]
+            checks = [s for s in steps[steps.index(next(s for s in steps if s.get("id") == "setup"))+1:] if s.get("name", "").startswith(("Lint ", "Test Rust"))]
             for check in checks:
                 self.assertNotIn("success()", check["if"])
                 self.assertIn("!cancelled()", check["if"])

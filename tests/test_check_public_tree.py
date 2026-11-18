@@ -78,6 +78,7 @@ class CommercialDenylistTests(unittest.TestCase):
             "launcher/src/wardrobe.rs",
             "launcher/src/wardrobe_page.rs",
             "launcher/assets/sculk-banner.webp",
+            "launcher/src/main.rs",
         ]
         for path in cases:
             with self.subTest(path=path), TemporaryDirectory() as directory:
@@ -90,9 +91,6 @@ class CommercialDenylistTests(unittest.TestCase):
     def test_kept_paths_and_nearby_names_are_allowed(self):
         allowed = [
             "crates/sunrise-official/Cargo.toml",
-            "launcher/src/shopping.rs",
-            "launcher/src/partners.rs",
-            "launcher/assets/logo.webp",
             "docs/cosmetics.md",
         ]
         with TemporaryDirectory() as directory:

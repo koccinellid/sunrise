@@ -360,13 +360,11 @@ class IgnoredTests(unittest.TestCase):
                           "--no-fail-fast"])
         self.assertEqual(command[command.index("--") + 1:], ["--ignored", "--exact", "--test-threads=4", "a", "b"])
 
-    def test_each_daily_rows_leg_runs_only_its_workspaces_groups(self):
-        rows = [ignored_tests.Row("sunrise-relay", "a", "test:tunnel", "daily", "daily-sunrise-relay.txt", "slow"),
-                ignored_tests.Row("sunrise-launcher", "b", "lib", "daily", "daily-sunrise-launcher.txt", "child-process")]
-        for leg, expected in (("daily-rows", [("sunrise-relay", (["test:tunnel"], ["a"]))]),
-                              ("daily-rows-launcher", [("sunrise-launcher", (["lib"], ["b"]))])):
-            _, execute, _, _ = self.daily_main([leg], rows, lambda package, skip, only, binaries: {only[1][0]: True})
-            self.assertEqual([(call.args[0], call.kwargs["only"]) for call in execute.call_args_list], expected)
+    def test_the_daily_rows_leg_runs_its_workspaces_groups(self):
+        rows = [ignored_tests.Row("sunrise-relay", "a", "test:tunnel", "daily", "daily-sunrise-relay.txt", "slow")]
+        _, execute, _, _ = self.daily_main(["daily-rows"], rows, lambda package, skip, only, binaries: {only[1][0]: True})
+        self.assertEqual([(call.args[0], call.kwargs["only"]) for call in execute.call_args_list],
+                         [("sunrise-relay", (["test:tunnel"], ["a"]))])
 
     def test_a_package_that_needs_something_built_gets_it_before_its_daily_tests(self):
         output = target(1, "test holder::tests::slow ... ok\n", summary(passed=1))
@@ -384,30 +382,10 @@ class IgnoredTests(unittest.TestCase):
             self.assertIsNone(ignored_tests.run("sunrise-mod-package", [], only=(["lib"], ["holder::tests::slow"])))
         self.assertEqual(execute.call_count, 1)
         self.assertEqual(ignored_tests._stopped["reason"], "what the tests need could not be built")
-        # verify and the launcher job build it with the same command.
+        # verify builds it with the same command.
         workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/dyna-ci.yml").read_text()
-        self.assertEqual(workflow.count("ignored_shards.py --prepare sunrise-mod-package"), 2)
+        self.assertEqual(workflow.count("ignored_shards.py --prepare sunrise-mod-package"), 1)
         self.assertNotIn("--example holder_actor", workflow)
-
-    def test_a_launcher_daily_row_runs_from_the_launcher_workspace_against_its_lockfile(self):
-        output = target(1, "test logs::slow ... ok\n", summary(passed=1))
-        with patch.object(ignored_tests.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, output)) as execute, \
-                patch.object(ignored_tests, "workspace_features", return_value={"sunrise-launcher": ["default"]}) as features, \
-                contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(ignored_tests.run("sunrise-launcher", [], only=(["test:logs"], ["logs::slow"])),
-                             {"logs::slow": True})
-        features.assert_called_once_with("launcher")
-        command = execute.call_args.args[0]
-        self.assertEqual(command[:command.index("--")],
-                         ["cargo", "test", "--locked", "-p", "sunrise-launcher", "--features", "default", "--test", "logs",
-                          "--no-fail-fast"])
-        self.assertEqual(execute.call_args.kwargs["cwd"], ignored_tests.ROOT / "launcher")
-        # A game package still runs from the repository root.
-        with patch.object(ignored_tests.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, output)) as execute, \
-                patch.object(ignored_tests, "workspace_features", return_value={}), contextlib.redirect_stdout(io.StringIO()):
-            ignored_tests.run("sunrise-relay", [], only=(["test:tunnel"], ["logs::slow"]))
-        self.assertEqual(execute.call_args.kwargs["cwd"], ignored_tests.ROOT / ".")
-        self.assertNotIn("--locked", execute.call_args.args[0])
 
     def test_a_parent_that_crashes_after_its_childs_same_count_summary_did_not_complete(self):
         # A fixture reruns its own test in a child, which reports FAILED and a one-test summary;

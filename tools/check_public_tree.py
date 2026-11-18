@@ -38,17 +38,15 @@ TABLE_ENTRIES = 50
 REMOVED_COMMERCIAL_PREFIXES = (
     "crates/sunrise-cosmetics",
     "crates/sunrise-official-servers",
-    "launcher/src/partner",
-    "launcher/src/shop",
-    "launcher/src/wardrobe",
-    "launcher/src/wardrobe_page",
 )
-REMOVED_COMMERCIAL_ASSETS = "launcher/assets/sculk-"
+# The launcher lives in sunrise-org/sunrise-launcher (launcher split D1); its removed commercial pages and sculk art
+# went with the tree, so nothing under launcher/ comes back.
+REMOVED_TREE = "launcher/"
 
 
 def commercial(path):
-    """True when `path` is a removed commercial crate, launcher page, or sculk ad asset."""
-    if path.startswith(REMOVED_COMMERCIAL_ASSETS):
+    """True when `path` is a removed commercial crate or anything under the removed launcher/ tree."""
+    if path.startswith(REMOVED_TREE):
         return True
     parsed = PurePosixPath(path)
     for prefix in REMOVED_COMMERCIAL_PREFIXES:

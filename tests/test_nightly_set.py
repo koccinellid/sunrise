@@ -215,10 +215,9 @@ class WorkflowIdTests(unittest.TestCase):
 class RefusalTests(unittest.TestCase):
     def test_what_codeowners_guards_is_refused(self):
         for path in (".github/workflows/x.yml", "tools/ci/nightly.py", "crates/sunrise-release-sign/src/lib.rs",
-                     "crates/sunrise-server/src/update.rs", "launcher/src/backend.rs", "launcher/links.json",
-                     "launcher/src/signed.rs", "tools/release_train.py"):
+                     "crates/sunrise-server/src/update.rs", "tools/release_train.py"):
             self.assertTrue(ns.guarded(path, PATTERNS), path)
-        for path in ("crates/sunrise-client/src/game.rs", "launcher/src/main.rs", "tools/ci.py", "docs/x.md",
+        for path in ("crates/sunrise-client/src/game.rs", "tools/ci.py", "docs/x.md",
                      "crates/sunrise-server/src/main.rs"):
             self.assertFalse(ns.guarded(path, PATTERNS), path)
         self.assertTrue(ns.guarded("tools/ci/x.py", ns.guarded_patterns("")))  # even without CODEOWNERS

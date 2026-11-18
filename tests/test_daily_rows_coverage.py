@@ -37,7 +37,6 @@ class DailyRowsCoverage(unittest.TestCase):
                                  capture_output=True, text=True, check=True).stdout
         legs = json.loads(printed.removeprefix("matrix="))["shard"]
         self.assertIn(ignored_shards.DAILY_ROWS, legs)
-        self.assertIn("daily-rows-launcher", legs)
 
     def test_a_row_no_leg_runs_fails(self):
         rows = [row("sunrise-world", "a"), row("sunrise-relay", "b", "test:tunnel")]
@@ -87,7 +86,7 @@ class WindowsDailyWorkflow(unittest.TestCase):
     DAILY = textwrap.dedent("""\
         jobs:
           windows-runtime-leases:
-            uses: ./.github/workflows/launcher-windows-check.yml
+            uses: ./.github/workflows/windows-runtime-leases.yml
             with:
               commit: ${{ needs.resolve.outputs.commit }}
         """)
@@ -109,7 +108,7 @@ class WindowsDailyWorkflow(unittest.TestCase):
             workflows = root / ".github/workflows"
             workflows.mkdir(parents=True)
             (workflows / "daily.yml").write_text(daily)
-            (workflows / "launcher-windows-check.yml").write_text(windows)
+            (workflows / "windows-runtime-leases.yml").write_text(windows)
             if unrelated is not None:
                 (workflows / "unrelated.yml").write_text(unrelated)
             return check.windows_daily_runs(root)
@@ -125,8 +124,8 @@ class WindowsDailyWorkflow(unittest.TestCase):
         self.assertFalse(self.wired(windows=self.WINDOWS.replace(self.COMMAND, "echo skipped"), unrelated=self.WINDOWS))
 
     def test_a_missing_uses_does_not_count(self):
-        self.assertFalse(self.wired(daily=self.DAILY.replace("uses: ./.github/workflows/launcher-windows-check.yml",
-                                                           "# uses: ./.github/workflows/launcher-windows-check.yml")))
+        self.assertFalse(self.wired(daily=self.DAILY.replace("uses: ./.github/workflows/windows-runtime-leases.yml",
+                                                           "# uses: ./.github/workflows/windows-runtime-leases.yml")))
 
     def test_a_disabled_job_or_step_does_not_count(self):
         for mutation in (self.WINDOWS.replace("- run:", "- if: ${{ false }}\n        run:"),
@@ -171,40 +170,6 @@ class DailyRowsMatchTheSource(unittest.TestCase):
 
 
 
-class LauncherDailyRows(unittest.TestCase):
-    """The launcher is its own workspace: its daily rows run from launcher/ in the daily-rows leg, and both static
-    checks read its sources. No launcher test carries the mark yet, so these use a synthetic row."""
-
-    def test_a_launcher_row_names_a_launcher_target_and_runs_in_the_daily_rows_leg(self):
-        targets = ignored_shards.workspace_targets()
-        self.assertTrue({"lib", "bin:sunrise-launcher", "test:storage"} <= targets["sunrise-launcher"])
-        rows = [row("sunrise-launcher", "logs::each_command_logs_its_time", "test:logs")]
-        self.assertEqual(check.daily_problems(rows, targets, FULL), [])
-        self.assertEqual(ignored_tests.daily_rows_groups(rows),
-                         {("sunrise-launcher", "test:logs"): ["logs::each_command_logs_its_time"]})
-        # Its own leg: the game's daily-rows leg does not build the launcher's workspace.
-        self.assertEqual(ignored_shards.daily_rows_leg("sunrise-launcher"), "daily-rows-launcher")
-        missing = check.daily_problems(rows, targets, [*ignored_shards.expand(ignored_shards.SHARDS), ignored_shards.DAILY_ROWS])
-        self.assertIn("no leg runs it (the daily-rows-launcher leg is missing)", missing[0])
-
-    def test_launcher_sources_are_read_for_the_attribute_both_ways(self):
-        self.assertEqual(ignored_shards.workspace_members()["sunrise-launcher"], ("launcher", "launcher"))
-        self.assertEqual(check.source_packages()["launcher"], {"sunrise-launcher"})
-        functions = [("launcher/tests/logs.rs", 12, "each_command_logs_its_time", {"sunrise-launcher"})]
-        self.assertEqual(check.source_problems([row("sunrise-launcher", "each_command_logs_its_time", "test:logs")],
-                                               functions), [])
-        self.assertIn("no daily row of sunrise-launcher names it", check.source_problems([], functions)[0])
-
-    def test_the_game_boot_check_reads_launcher_sources(self):
-        boot = importlib.util.spec_from_file_location("check_game_boot_tests", ROOT / "tools/ci/check_game_boot_tests.py")
-        module = importlib.util.module_from_spec(boot)
-        boot.loader.exec_module(module)
-        sources = module.tracked_sources()
-        self.assertIn("launcher/src/main.rs", sources)
-        self.assertIn("crates/sunrise-core/src/lib.rs", sources)
-
-
-
 class RowlessIgnores(unittest.TestCase):
     """An #[ignore]d test no daily shard runs needs a row of some mark; in a shard's own targets it runs anyway."""
 
@@ -215,16 +180,14 @@ class RowlessIgnores(unittest.TestCase):
         functions = [self.ignored("crates/sunrise-world/src/a.rs", {"sunrise-world"}, "lib"),
                      self.ignored("crates/sunrise-client/src/game/b.rs", {"sunrise-client", "sunrise-client-lib"}, "bin"),
                      self.ignored("crates/sunrise-world/tests/c.rs", {"sunrise-world"}, "test"),
-                     self.ignored("crates/sunrise-core/src/d.rs", {"sunrise-core"}, "lib"),
-                     self.ignored("launcher/src/e.rs", {"sunrise-launcher"}, "lib")]
+                     self.ignored("crates/sunrise-core/src/d.rs", {"sunrise-core"}, "lib")]
         problems = check.rowless_problems([], functions)
         self.assertEqual([problem.split(":", 1)[0] for problem in problems],
-                         ["crates/sunrise-world/tests/c.rs", "crates/sunrise-core/src/d.rs", "launcher/src/e.rs"])
+                         ["crates/sunrise-world/tests/c.rs", "crates/sunrise-core/src/d.rs"])
         self.assertIn("runs nowhere", problems[0])
         self.assertIn("manual-PACKAGE.txt", problems[0])
         rows = [ignored_tests.Row("sunrise-world", "it::slow", "by-hand", "manual", "manual-sunrise-world.txt"),
-                ignored_tests.Row("sunrise-core", "d::slow", "#12", None, "issue-12.txt"),
-                row("sunrise-launcher", "e::tests::slow")]
+                ignored_tests.Row("sunrise-core", "d::slow", "#12", None, "issue-12.txt")]
         self.assertEqual(check.rowless_problems(rows, functions), [])
 
     def test_where_a_source_file_builds(self):
@@ -244,7 +207,7 @@ class WindowsDailyTests(unittest.TestCase):
                                   "sunrise-mod-package", "lib"], capture_output=True, text=True, check=True).stdout
         self.assertIn("holder::tests::private_version_is_refused_before_normal_startup", printed.split())
         self.assertNotIn("holder::game_entry::tests::write_missing_registration_actor", printed.split())
-        workflow = (ROOT / ".github/workflows/launcher-windows-check.yml").read_text()
+        workflow = (ROOT / ".github/workflows/windows-runtime-leases.yml").read_text()
         self.assertIn("ignored_tests.py --daily-tests sunrise-mod-package lib", workflow)
         self.assertNotIn("< <(", workflow)  # a process substitution would hide the reader's failure
         # No rows: no output at all, not one empty name.

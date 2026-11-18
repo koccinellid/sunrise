@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from tools.ci.rust_changes import (
-    UNKNOWN_CHANGE, changed_entries, changed_paths, needs_launcher, needs_rust, needs_server_build, needs_tooling,
+    UNKNOWN_CHANGE, changed_entries, changed_paths, needs_rust, needs_server_build, needs_tooling,
     selections,
 )
 
@@ -30,21 +30,9 @@ class RustChangesTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(needs_rust(["README.md", path]))
 
-    def test_launcher_checks_follow_the_crates_it_builds(self):
-        for path in ["crates/sunrise-client/src/game.rs", "launcher/links.json", "launcher/docs/a.md",
-                     "launcher/README.md", "website/src/index.html", "tools/pr_ready.py"]:
-            with self.subTest(path=path):
-                self.assertFalse(needs_launcher([path]))
-        for path in ["launcher/src/main.rs", "launcher/Cargo.lock", "crates/sunrise-port-pack/src/net.rs",
-                     "crates/sunrise-mcp/src/lib.rs", "crates/sunrise-mod-api-gen/src/injection.rs",
-                     "crates/sunrise-theme/src/lib.rs", "Cargo.toml", "Cargo.lock",
-                     ".github/workflows/ci.yml", ".github/workflows/dyna-ci.yml"]:
-            with self.subTest(path=path):
-                self.assertTrue(needs_launcher(["README.md", path]))
-
     def test_the_server_build_clippy_follows_the_client_crates_and_manifests(self):
         for path in ["crates/sunrise-world/src/lib.rs", "crates/sunrise-perf/src/lib.rs", "tools/parity.py",
-                     "docs/setup.md", "launcher/src/main.rs"]:
+                     "docs/setup.md"]:
             with self.subTest(path=path):
                 self.assertFalse(needs_server_build([path]))
         for path in ["crates/sunrise-client/src/game.rs", "crates/sunrise-client-render/src/hud.rs",
@@ -102,20 +90,19 @@ class RustChangesTests(unittest.TestCase):
 
     def test_boundary_uses_fail_closed_rust_selection(self):
         # The lint boundary step consumes this same central decision.
-        for path in ["Cargo.toml", "crates/example/Cargo.toml", "launcher/Cargo.toml",
+        for path in ["Cargo.toml", "crates/example/Cargo.toml",
                      "crates/example/src/lib.rs", UNKNOWN_CHANGE]:
             with self.subTest(path=path):
                 self.assertTrue(selections([("M", path)])["rust_required"])
         self.assertFalse(selections([("M", "docs/setup.md")])["rust_required"])
 
-    def test_shared_selections_preserve_launcher_requirements(self):
+    def test_shared_selections(self):
         self.assertEqual(selections([("M", "docs/setup.md")]), {
-            "rust_required": False, "launcher_required": False, "tooling_required": False,
+            "rust_required": False, "tooling_required": False,
         })
         for path in ["Cargo.lock", "tools/ci/rust_changes.py", ".github/workflows/dyna-ci.yml"]:
             selected = selections([("M", path)])
             self.assertTrue(selected["rust_required"])
-            self.assertTrue(selected["launcher_required"])
             self.assertTrue(selected["tooling_required"])
         # The machine sample is a daily leg: a mod API change selects nothing extra in dyna-checks.
         self.assertFalse(selections([("M", "crates/sunrise-mod-api/README.md")])["rust_required"])
@@ -159,8 +146,7 @@ class RustChangesTests(unittest.TestCase):
                 [sys.executable, str(selector), "--all", base, "HEAD"], cwd=directory, text=True,
             )
             self.assertEqual(dict(line.split("=") for line in output.splitlines()), {
-                "rust_required": "false", "launcher_required": "false",
-                "tooling_required": "true",
+                "rust_required": "false", "tooling_required": "true",
             })
 
     def test_a_base_missing_from_the_checkout_means_everything_changed(self):
@@ -179,7 +165,6 @@ class RustChangesTests(unittest.TestCase):
                 os.chdir(previous)
             self.assertEqual(paths, [UNKNOWN_CHANGE])
             self.assertTrue(needs_rust(paths))
-            self.assertTrue(needs_launcher(paths))
 
 
 if __name__ == "__main__":

@@ -40,8 +40,8 @@ class ReleaseTrainTests(unittest.TestCase):
                         (27, "imported"), (28, "collision"), (28, "own")]), \
                     mock.patch.object(train, "gh_json", return_value=[metadata_page([]),
                         metadata_page([merged_node(28, "own")])]) as api, \
-                    mock.patch.object(train, "changed_paths", return_value=["launcher/src/main.rs"]):
-                last, prs = train.gather("launcher", "head", releases=[])
+                    mock.patch.object(train, "changed_paths", return_value=["crates/sunrise-client/src/game.rs"]):
+                last, prs = train.gather("game", "head", releases=[])
                 self.assertIsNone(last)
                 self.assertEqual([p["number"] for p in prs], [28])
                 api.assert_called_once()
@@ -49,9 +49,9 @@ class ReleaseTrainTests(unittest.TestCase):
                 self.assertEqual(args[:3], ("api", "graphql", "--paginate"))
                 self.assertIn(f"owner={repository.split('/')[0]}", args)
                 self.assertIn(f"name={repository.split('/')[1]}", args)
-                release, _ = train.decision("launcher", prs, NOW)
+                release, _ = train.decision("game", prs, NOW)
                 self.assertTrue(release)
-                _, body = train.notes("launcher", "launcher@0.2.0", prs, [])
+                _, body = train.notes("game", "v0.2.0", prs, [])
                 self.assertIn("#28", body)
                 self.assertNotIn("#27", body)
 
@@ -59,37 +59,25 @@ class ReleaseTrainTests(unittest.TestCase):
         with mock.patch.object(train, "run", return_value="root"), \
                 mock.patch.object(train, "merged_pull_requests", return_value=[(27, "imported")]), \
                 mock.patch.object(train, "gh_json", return_value=[metadata_page([])]):
-            last, prs = train.gather("launcher", "head", releases=[])
+            last, prs = train.gather("game", "head", releases=[])
             self.assertIsNone(last)
             self.assertEqual(prs, [])
-            self.assertEqual(train.next_launcher_tag([], False, (0, 2)), "launcher@0.2.0")
-            self.assertTrue(train.decision("launcher", prs, NOW, new_line="0.2")[0])
-            self.assertFalse(train.decision("launcher", prs, NOW)[0])
-            _, body = train.notes("launcher", "launcher@0.2.0", prs, [])
+            self.assertTrue(train.decision("game", prs, NOW, new_line="0.2")[0])
+            self.assertFalse(train.decision("game", prs, NOW)[0])
+            _, body = train.notes("game", "v0.2.0", prs, [])
             self.assertNotIn("#27", body)
-
-    def test_a_published_launcher_pre_release_is_the_next_baseline(self):
-        page = [{"tag_name": "launcher@1.0.1", "draft": True, "prerelease": True},
-                {"tag_name": "launcher@1.0.0", "draft": False, "prerelease": True},
-                {"tag_name": "nightly", "draft": False, "prerelease": True}]
-        with mock.patch.object(train, "gh_json", return_value=[page]), \
-                mock.patch.object(train, "merged_between", return_value=[]) as between:
-            last, prs = train.gather("launcher", "head")
-        self.assertEqual(last["tag_name"], "launcher@1.0.0")
-        between.assert_called_once_with("launcher", "launcher@1.0.0", "head")
-        self.assertFalse(train.decision("launcher", prs, NOW)[0])
 
     def test_release_metadata_errors_are_not_imports(self):
         with mock.patch.object(train, "merged_pull_requests", return_value=[(28, "own")]), \
                 mock.patch.object(train, "gh_json", side_effect=RuntimeError("API unavailable")):
             with self.assertRaisesRegex(RuntimeError, "API unavailable"):
-                train.merged_between("launcher", "base", "head")
+                train.merged_between("game", "base", "head")
         broken = merged_node(28, "own")
         broken["mergedAt"] = "invalid date"
         with mock.patch.object(train, "merged_pull_requests", return_value=[(28, "own")]), \
                 mock.patch.object(train, "gh_json", return_value=[metadata_page([broken])]):
             with self.assertRaises(ValueError):
-                train.merged_between("launcher", "base", "head")
+                train.merged_between("game", "base", "head")
 
     def test_large_history_uses_paginated_metadata_without_per_pr_requests(self):
         nodes = [merged_node(n, f"sha-{n}") for n in range(1, 301)]
@@ -112,8 +100,8 @@ class ReleaseTrainTests(unittest.TestCase):
         with mock.patch.object(train, "merged_pull_requests", return_value=[
                 (n["number"], n["mergeCommit"]["oid"]) for n in nodes]), \
                 mock.patch.object(train, "gh_json", side_effect=response) as api, \
-                mock.patch.object(train, "changed_paths", return_value=["launcher/src/main.rs"]):
-            prs = train.merged_between("launcher", "base", "head")
+                mock.patch.object(train, "changed_paths", return_value=["crates/sunrise-client/src/game.rs"]):
+            prs = train.merged_between("game", "base", "head")
         self.assertEqual(len(prs), 300)
         self.assertEqual(prs[0]["title"], "Fix a thing")
         self.assertEqual(prs[0]["issues"], [3, 9])
@@ -123,66 +111,6 @@ class ReleaseTrainTests(unittest.TestCase):
         self.assertEqual(prs[-1]["merged_at"], NOW - dt.timedelta(hours=9))
         api.assert_called_once()
         self.assertEqual(api.call_args.args[:3], ("api", "graphql", "--paginate"))
-
-    def test_launcher_decision_shell_fails_closed_and_succeeds_normally(self):
-        workflow = (train.ROOT / ".github/workflows/launcher.yml").read_text()
-        step = workflow.split("      - id: decide\n", 1)[1].split("\n  build:", 1)[0]
-        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
-        script = script.replace("${{ steps.mode.outputs.dry_run }}", "true")
-        for status in (23, 0):
-            with self.subTest(status=status), tempfile.TemporaryDirectory() as tmp:
-                root = Path(tmp)
-                (root / "tools").mkdir()
-                # Execute the workflow's real pipeline with a controlled decision subprocess.
-                (root / "tools/release_train.py").write_text(
-                    "import json, os, sys\n"
-                    f"sys.exit({status})\n" if status else
-                    "import json, os\n"
-                    "print(json.dumps({'reason': 'ready', 'tag': 'launcher@0.2.0'}))\n"
-                    "with open(os.environ['GITHUB_OUTPUT'], 'a') as out:\n"
-                    "    out.write('tag=launcher@0.2.0\\n')\n")
-                output = root / "output"
-                output.touch()
-                result = subprocess.run(["bash", "-e", "-c", script], cwd=root, capture_output=True,
-                                        text=True, env={**os.environ, "GITHUB_OUTPUT": str(output),
-                                        "GITHUB_STEP_SUMMARY": str(root / "summary"), "GITHUB_SHA": "head",
-                                        "BASE": "", "EVENT": "workflow_dispatch", "DRY_RUN": "true",
-                                        "SOURCE_SHA": "head", "FORCE": ""})
-                if status:
-                    self.assertEqual(result.returncode, status, result.stderr)
-                    self.assertEqual(output.read_text(), "")
-                    self.assertFalse((root / "summary").exists())
-                else:
-                    self.assertEqual(result.returncode, 0, result.stderr)
-                    self.assertEqual(output.read_text(),
-                                     "tag=launcher@0.2.0\nversion=0.2.0\nrelease=true\nhead=head\n")
-
-    def test_launcher_real_dispatch_refuses_a_commit_behind_main_unless_base_names_it(self):
-        workflow = (train.ROOT / ".github/workflows/launcher.yml").read_text()
-        step = workflow.split("      - id: decide\n", 1)[1].split("\n  build:", 1)[0]
-        script = textwrap.dedent(step.split("        run: |\n", 1)[1]).replace("${{ steps.mode.outputs.dry_run }}", "false")
-        # The release base check (the `if [[ -n "$BASE" ]]` block) needs a repository; this exercises what follows.
-        script = script.replace('if [[ -n "$BASE" ]]; then', 'if false; then', 1)
-        cases = [
-            (dict(BASE="", EVENT="workflow_dispatch", DRY_RUN="false"), "older", False),
-            (dict(BASE="", EVENT="workflow_dispatch", DRY_RUN="false"), "head", True),
-            (dict(BASE="", EVENT="workflow_dispatch", DRY_RUN="true"), "older", True),
-            (dict(BASE="", EVENT="schedule", DRY_RUN="false"), "older", True),
-        ]
-        for env, picked, passes in cases:
-            with self.subTest(env=env, picked=picked), tempfile.TemporaryDirectory() as tmp:
-                root = Path(tmp)
-                (root / "tools").mkdir()
-                (root / "tools/release_train.py").write_text(
-                    "import json\n"
-                    f"print(json.dumps({{'reason': 'ready', 'tag': 'launcher@0.2.0', 'head': '{picked}'}}))\n")
-                result = subprocess.run(["bash", "-e", "-c", script], cwd=root, capture_output=True, text=True,
-                                        env={**os.environ, **env, "GITHUB_OUTPUT": str(root / "output"),
-                                             "GITHUB_STEP_SUMMARY": str(root / "summary"), "GITHUB_SHA": "head",
-                                             "SOURCE_SHA": "head", "FORCE": ""})
-                self.assertEqual(result.returncode == 0, passes, result.stdout + result.stderr)
-                if not passes:
-                    self.assertIn("not main's head", result.stdout)
 
     def test_player_facing_paths(self):
         exporters = {"mods/sunrise/src/test/java/dev/sunriselab/parity/VanillaMobDataExporter.java"}
@@ -194,11 +122,6 @@ class ReleaseTrainTests(unittest.TestCase):
         self.assertFalse(train.player_facing("crates/sunrise-world/examples/probe.rs", "game"))
         self.assertFalse(train.player_facing("crates/sunrise-client/README.md", "game"))
         self.assertFalse(train.player_facing("tools/test_food_parity.py", "game"))
-        self.assertFalse(train.player_facing("launcher/src/main.rs", "game"))
-        self.assertTrue(train.player_facing("launcher/src/main.rs", "launcher"))
-        self.assertTrue(train.player_facing("crates/sunrise-prepare/src/lib.rs", "launcher"))
-        self.assertFalse(train.player_facing("launcher/links.json", "launcher"))
-        self.assertFalse(train.player_facing("crates/sunrise-client/src/game.rs", "launcher"))
 
     def test_the_exporters_are_those_sunrise_prepare_names(self):
         found = train.exporters()
@@ -216,36 +139,26 @@ class ReleaseTrainTests(unittest.TestCase):
         tags = ["v2026.10.15.09", "v2026.10.15.10", "v2026.10.15"]
         self.assertEqual(sorted(tags), sorted(tags, key=train.tag_key))
 
-    def test_launcher_tags_bump_the_patch_or_the_minor(self):
-        tags = ["launcher-v0.1.3", "launcher-v0.1.10", "v2026.10.15", "launcher-v0.1.4"]
-        self.assertEqual(train.next_launcher_tag(tags, minor=False), "launcher-v0.1.11")
-        self.assertEqual(train.next_launcher_tag(tags, minor=True), "launcher-v0.2.0")
-
     def test_0_2_tags_follow_every_tag_from_before(self):
         order = ["launcher-v0.1.9", "launcher-v0.16.0", "v2026.10.19.15", "v2026.10.21", "v0.2.0-beta.1", "v0.2.0",
                  "v0.2.1-beta", "v0.2.1-beta.1", "v0.2.1-beta.2", "v0.2.1-beta.11", "v0.2.1-rc.1", "v0.2.1", "v0.2.9",
                  "v0.2.10", "v0.3.0-1", "v0.3.0-alpha", "v0.3.0", "v1.0.0"]
         self.assertEqual(sorted(reversed(order), key=train.tag_key), order)
-        self.assertGreater(train.tag_key("launcher@0.2.0"), train.tag_key("launcher-v0.16.0"))
         self.assertEqual(train.tag_key("v2026.10.19"), train.tag_key("v2026.10.19.0"))
         for tag in ["v0.2.0", "v0.3.0-rc.1", "v2026.10.21", "v2026.10.19.15"]:
             self.assertTrue(train.is_game_tag(tag), tag)
         for tag in ["launcher@0.2.0", "launcher-v0.2.0", "v0.2", "vnext", "v2026.10.21-x", "v0.2.0-"]:
             self.assertFalse(train.is_game_tag(tag), tag)
-        self.assertTrue(train.is_launcher_tag("launcher@0.2.0") and train.is_launcher_tag("launcher-v0.16.0"))
-        self.assertFalse(train.is_launcher_tag("v0.2.0"))
 
     def test_tags_on_a_release_line(self):
         line = (0, 2)
         before = ["v2026.10.19.15", "v2026.10.21", "launcher-v0.16.0", "launcher-v0.2.0", "launcher-v0.2.1"]
         today = dt.date(2026, 10, 23)
         self.assertEqual(train.next_game_tag(before, today, line), "v0.2.0")
-        self.assertEqual(train.next_launcher_tag(before, minor=True, line=line), "launcher@0.2.0")
         self.assertTrue(train.first_on_line(before, "v", line))
         after = before + ["v0.2.0", "v0.2.1", "launcher@0.2.0", "v0.3.0-rc.1"]
         self.assertEqual(train.next_game_tag(after, today, line), "v0.2.2")
         # A feature doesn't move the line; only .github/release-line.txt does.
-        self.assertEqual(train.next_launcher_tag(after, minor=True, line=line), "launcher@0.2.1")
         self.assertFalse(train.first_on_line(after, "v", line))
         self.assertTrue(train.first_on_line(after, "v", (0, 3)), "a pre-release isn't the line's first release")
         self.assertEqual(train.next_game_tag(after, today, (0, 3)), "v0.3.0")
@@ -253,7 +166,6 @@ class ReleaseTrainTests(unittest.TestCase):
             train.next_game_tag(after + ["v0.3.0"], today, line)
         # Without a line, the tags from before 0.2, whatever 0.2 tags exist.
         self.assertEqual(train.next_game_tag(before, today), "v2026.10.23")
-        self.assertEqual(train.next_launcher_tag(after, minor=False), "launcher-v0.16.1")
 
     def test_the_release_line_file(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -278,9 +190,7 @@ class ReleaseTrainTests(unittest.TestCase):
         body = body.removeprefix(train.PLAYERS + "\n\n")
         self.assertTrue(body.startswith("Sunrise is numbered from now on: this is Sunrise 0.2.0, the release after 2026.10.21."))
         self.assertIn("`sunrise-server update --version v0.2.0`", body)
-        title, body = train.notes("launcher", "launcher@0.2.0", [], [], previous="launcher-v0.17.0")
-        self.assertEqual(title, "Sunrise launcher 0.2.0")
-        self.assertIn("the release after launcher 0.17.0", body)
+        title, body = train.notes("game", "v0.2.0", [], [], previous="v2026.10.21")
         self.assertIn("Rebuilt from the latest main.", body)
         body = train.notes("game", "v0.3.0", [pr(1)], [], previous="v0.2.14")[1]
         self.assertTrue(body.startswith(train.PLAYERS + "\n\nThe first release of Sunrise 0.3."))
@@ -316,95 +226,6 @@ class ReleaseTrainTests(unittest.TestCase):
         self.assertFalse(train.decision("game", [], NOW, new_line="0.3", blockers=[7])[0])
         self.assertTrue(train.decision("game", [pr(1)], NOW, blockers=[])[0])
 
-    def test_launcher_manual_base_is_pinned_and_must_belong_to_main(self):
-        workflow = (train.ROOT / ".github/workflows/launcher.yml").read_text()
-        selection = workflow.split("          set -euo pipefail\n", 1)[1].split(
-            "          python3 tools/release_train.py decide", 1)[0]
-        script = "set -euo pipefail\n" + textwrap.dedent(selection) + '\nprintf "%s" "$HEAD_SHA"'
-        with tempfile.TemporaryDirectory() as folder:
-            def git(*args):
-                return subprocess.check_output(["git", *args], cwd=folder, text=True,
-                                               stderr=subprocess.DEVNULL).strip()
-            git("init", "-b", "main")
-            git("config", "user.name", "Test")
-            git("config", "user.email", "test@example.invalid")
-            git("commit", "--allow-empty", "-m", "main")
-            main = git("rev-parse", "HEAD")
-            git("remote", "add", "origin", folder)
-            git("checkout", "-b", "topic")
-            git("commit", "--allow-empty", "-m", "not main")
-            topic = git("rev-parse", "HEAD")
-            def select(base="", event="workflow_dispatch", dry_run="false"):
-                return subprocess.run(["bash", "-c", script], cwd=folder, text=True,
-                                      capture_output=True, env={**os.environ, "BASE": base,
-                                      "EVENT": event, "DRY_RUN": dry_run, "SOURCE_SHA": topic})
-            for dry_run in ("false", "true"):
-                result = select(main, dry_run=dry_run)
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(result.stdout, main)
-            for invalid in ("does-not-exist", topic, "--help"):
-                result = select(invalid)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn("::error::base", result.stdout)
-            self.assertEqual(select().stdout, "", "default real manual run uses the gate picker")
-            self.assertEqual(select(event="push").stdout, topic)
-            self.assertEqual(select(dry_run="true").stdout, topic)
-
-    def test_a_launcher_from_main_waits_for_a_nightly_with_prepare_needs_and_an_sdk_tool(self):
-        real_run = train.run
-        with tempfile.TemporaryDirectory() as folder:
-            def git(*args):
-                return subprocess.check_output(["git", *args], cwd=folder, text=True,
-                                               stderr=subprocess.DEVNULL).strip()
-            git("init", "-b", "main")
-            git("config", "user.name", "Test")
-            git("config", "user.email", "test@example.invalid")
-            git("commit", "--allow-empty", "-m", "before")
-            before = git("rev-parse", "HEAD")
-            git("commit", "--allow-empty", "-m", "sunrise-prepare needs")
-            needs = git("rev-parse", "HEAD")
-            git("remote", "add", "origin", folder)
-            sdk_assets = []
-            def run(*command, check=True):
-                if command[0] == "gh":
-                    self.assertEqual(command[2], f"repos/{train.REPO}/releases/tags/sdk-{needs}")
-                    return "\n".join(sdk_assets)
-                return real_run(*command, check=check)
-            with mock.patch.object(train, "ROOT", Path(folder)), mock.patch.object(train, "PREPARE_NEEDS", needs), \
-                    mock.patch.object(train, "run", side_effect=run):
-                self.assertIn("no Nightly is published", train.launcher_waits_for_nightly())
-                git("tag", "nightly", before)
-                self.assertIn("no `sunrise-prepare needs`", train.launcher_waits_for_nightly())
-                git("tag", "-f", "nightly", needs)
-                sdk_assets[:] = ["sdk.json", "runtime-x86_64-unknown-linux-gnu.tar.xz"]
-                self.assertIn("no `tool` slice", train.launcher_waits_for_nightly())
-                sdk_assets.append("tool-x86_64-unknown-linux-gnu.tar.xz")
-                self.assertIsNone(train.launcher_waits_for_nightly())
-
-    def test_only_a_launcher_with_the_split_is_held(self):
-        with tempfile.TemporaryDirectory() as folder:
-            def git(*args):
-                return subprocess.check_output(["git", *args], cwd=folder, text=True,
-                                               stderr=subprocess.DEVNULL).strip()
-            git("init", "-b", "main")
-            git("config", "user.name", "Test")
-            git("config", "user.email", "test@example.invalid")
-            git("commit", "--allow-empty", "-m", "launcher@1.0.1")
-            hotfix = git("rev-parse", "HEAD")
-            git("commit", "--allow-empty", "-m", "launcher split")
-            split = git("rev-parse", "HEAD")
-            heads = {2080: split, 2163: "f" * 40}
-            def run(*command, check=True):
-                self.assertEqual(command[0], "gh")
-                return heads[int(command[2].rsplit("/", 1)[1])] + "\n"
-            with mock.patch.object(train, "ROOT", Path(folder)), mock.patch.object(train, "run", side_effect=run):
-                self.assertTrue(train.launcher_has_split(split))
-                self.assertFalse(train.launcher_has_split(hotfix))
-            with mock.patch.object(train, "subprocess", wraps=train.subprocess) as sub:
-                sub.run.return_value = subprocess.CompletedProcess([], 1, "", "API rate limit exceeded")
-                with self.assertRaises(SystemExit):
-                    train.launcher_has_split(hotfix)
-
     @mock.patch.object(train, "REPO", "sunrise-org/sunrise")
     def test_fork_base_requires_same_sha_main_push_gate_jobs(self):
         def record(sha, ident, event="push", branch="main"):
@@ -412,7 +233,7 @@ class ReleaseTrainTests(unittest.TestCase):
                         status="completed", conclusion="failure")
         def job(name, status="completed", conclusion="success"):
             return dict(name=name, status=status, conclusion=conclusion)
-        gates = [job(name) for name in ("lint", "verify", "verify-static", "launcher")]
+        gates = [job(name) for name in ("lint", "verify", "verify-static")]
         records = [record("pr", 1, "pull_request"), record("topic", 2, branch="topic"),
                    record("new", 3), record("good", 4), record("old", 5)]
         jobs = {3: gates[:-1], 4: gates + [job("client-data", conclusion="failure")]}
@@ -436,7 +257,7 @@ class ReleaseTrainTests(unittest.TestCase):
             paths = [call.args[2] for call in requests.call_args_list]
             self.assertFalse(any("/runs/3/jobs" in path for path in paths))
             self.assertTrue(any("/runs/4/jobs" in path for path in paths))
-            for name in ("verify", "verify-static", "launcher"):
+            for name in ("verify", "verify-static"):
                 for status, conclusion in [("queued", None), ("in_progress", "success"),
                                            ("completed", "skipped"), ("completed", "cancelled"),
                                            ("completed", "failure"), ("completed", "timed_out")]:
@@ -481,15 +302,15 @@ class ReleaseTrainTests(unittest.TestCase):
                     head = commits[1]
                     green = {"workflow_runs": [dict(head_sha=head, head_branch="main", event="push", id=7)]}
                     done = dict(status="completed", conclusion="success")
-                    gates = [{"jobs": [dict(name=name, **done) for name in ("lint", "verify", "verify-static", "launcher")]}]
+                    gates = [{"jobs": [dict(name=name, **done) for name in ("lint", "verify", "verify-static")]}]
                     with mock.patch.object(train, "REPO", "sunrise-org/sunrise"), \
                             mock.patch.object(train, "gh_json", side_effect=[[green], gates]):
                         self.assertEqual(train.channel_head(channel, ""), head, "a snapshot needs the gate only")
                     with mock.patch.object(train, "REPO", "sunrise-org/sunrise"), \
-                            mock.patch.object(train, "gh_json", side_effect=[[green], [{"jobs": gates[0]["jobs"][:3]}]]):
+                            mock.patch.object(train, "gh_json", side_effect=[[green], [{"jobs": gates[0]["jobs"][:2]}]]):
                         with self.assertRaisesRegex(SystemExit, f"a {channel} needs the gate green"):
                             train.channel_head(channel, head)
-                    pending = [{"jobs": gates[0]["jobs"][:3] + [dict(name="launcher", status="in_progress", conclusion=None)]}]
+                    pending = [{"jobs": gates[0]["jobs"][:2] + [dict(name="verify-static", status="in_progress", conclusion=None)]}]
                     with mock.patch.object(train, "REPO", "sunrise-org/sunrise"), \
                             mock.patch.object(train, "gh_json", side_effect=[[green], pending]):
                         with self.assertRaisesRegex(SystemExit, f"a {channel} needs the gate green"):
@@ -677,43 +498,6 @@ class ReleaseTrainTests(unittest.TestCase):
         self.assertEqual(title, "Sunrise 2026.10.15: Controllers, stuck keys when opening Options, maces")
         self.assertEqual(train.summary([], [pr(n, f"Change number {n} with a fairly long title") for n in range(4)]),
                          "Change number 3 with a fairly long title and 3 more fixes")
-
-    def test_launcher_notes(self):
-        title, body = train.notes("launcher", "launcher-v0.2.0", [pr(3, "Launcher: say the self-update succeeded")], [])
-        self.assertEqual(title, "Sunrise launcher 0.2.0")
-        self.assertIn("### Fixed\n- Launcher: say the self-update succeeded (#3)", body)
-        self.assertNotIn("Known issues", body)
-        self.assertNotIn(train.PLAYERS, body)
-        self.assertNotIn(train.PLAYERS_FOOTER, body)
-        self.assertIn("Your launcher updates itself.", body)
-
-    def test_fork_launcher_notes_use_supported_downloads_and_exact_verifier_tag(self):
-        import shlex
-        tag = "launcher@0.3.0"
-        title, body = train.notes("launcher", tag, [pr(3, "Fix launcher updates")], [],
-                                 previous="launcher-v0.17.0", repository="sunrise-org/sunrise")
-        self.assertEqual(title, f"Sunrise Launcher {tag}")
-        self.assertTrue(body.startswith("# Sunrise Launcher\n"))
-        self.assertIn("### Fixed\n- Fix launcher updates (#3)", body)
-        self.assertNotIn(train.LAUNCHER_FOOTER, body)
-        self.assertIn("sunrise-launcher-macos-arm64.dmg", body)
-        self.assertNotIn("numbered with the game", body)
-        command = next(line for line in body.splitlines() if line.startswith("cargo run "))
-        self.assertEqual(shlex.split(command), [
-            "cargo", "run", "--locked", "-p", "sunrise-release-sign", "--", "verify",
-            "--repository", "sunrise-org/sunrise", "--tag", tag, "--publishing",
-            "/absolute/path/to/downloads",
-        ])
-        clone = next(line for line in body.splitlines() if line.startswith("git clone "))
-        self.assertEqual(shlex.split(clone)[3], tag)
-        self.assertNotIn("{tag}", body)
-
-    def test_the_first_fork_launcher_release_lists_no_pull_requests(self):
-        _, body = train.notes("launcher", "launcher@1.0.0", [pr(3, "CI: a runner change")], [],
-                              repository="sunrise-org/sunrise")
-        self.assertIn("The first release of Sunrise's launcher.", body)
-        self.assertNotIn("(#3)", body)
-        self.assertNotIn("Thanks to", body)
 
     def test_a_game_release_opens_with_the_way_to_the_launcher(self):
         # GitHub's latest is a game release: whoever lands on it is sent to the launcher first (#1647).
